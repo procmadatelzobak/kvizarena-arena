@@ -74,3 +74,5 @@ navíc zvýrazňuje flash zprávy (úspěch/varování/chyba), aby administráto
 provedené akce.
 
 Při importu se existující otázky (podle textu) znovu nevytvářejí, místo toho se znovu využijí.
+Řádky s nekompletními údaji se bezpečně přeskočí a zaznamenají do logu, takže vadný CSV
+soubor nezastaví import celého kvízu.
