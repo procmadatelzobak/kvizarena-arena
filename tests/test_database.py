@@ -1,6 +1,7 @@
 """Tests for database models and functionality."""
 
 import pytest
+from sqlalchemy import inspect
 from app import create_app
 from app.database import db, Otazka, Kviz, KvizOtazky, GameSession
 
@@ -28,10 +29,8 @@ def client(app):
 def test_database_tables_created(app):
     """Test that all expected tables are created."""
     with app.app_context():
-        tables = db.session.execute(
-            db.text("SELECT name FROM sqlite_master WHERE type='table'")
-        ).fetchall()
-        table_names = [t[0] for t in tables]
+        inspector = inspect(db.engine)
+        table_names = inspector.get_table_names()
         
         assert "otazky" in table_names
         assert "kvizy" in table_names
