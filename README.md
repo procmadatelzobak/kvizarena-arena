@@ -42,7 +42,12 @@ na základě šablony `.env.example` včetně vygenerování nového `SECRET_KEY
     pip install -r requirements.txt
     ```
 
-4.  **Spuštění aplikace:**
+4.  **Inicializace databáze:**
+    ```bash
+    flask --app app init-db
+    ```
+
+5.  **Spuštění aplikace:**
     ```bash
     ./run.sh
     ```
