@@ -1,14 +1,29 @@
-__pycache__/
-*.py[cod]
-*.sqlite3
-instance/
-.env
-.venv/
+# Složka virtuálního prostředí
 venv/
-.env.*
-!.env.example
-.pytest_cache/
-.mypy_cache/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Soubor lokální databáze
+*.db
+*.sqlite
+*.sqlite3
+
+# Konfigurace IDE
 .idea/
 .vscode/
-.DS_Store
+
+# Lokální .env soubor (pro bezpečnost)
+.env
+
+# Spreadsheet files (např. dočasné importy)
+*.csv
+*.xls
+*.xlsx
+*.ods
+
+# Dočasné soubory
+~$*.*
+*.tmp
