@@ -1,8 +1,8 @@
 """
-Databázové modely pro KvízArénu (s použitím Flask-SQLAlchemy).
+Database models for KvizArena (using Flask-SQLAlchemy).
 
-Tento soubor definuje `db` instanci a všechny databázové modely
-(tabulky) pro aplikaci.
+This file defines the `db` instance and all database models (tables)
+for the application.
 """
 
 from __future__ import annotations
@@ -15,17 +15,17 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-# Instance SQLAlchemy, inicializovaná v app.py
+# SQLAlchemy instance, initialized in app.py
 db = SQLAlchemy()
 
-DEFAULT_QUESTION_TIME_LIMIT = 15  # Výchozí čas na otázku v sekundách
+DEFAULT_QUESTION_TIME_LIMIT = 15  # Default time per question in seconds
 
-# --- Modely pro Správu Kvízů (Import z Vševěda) ---
+# --- Models for Quiz Management (Imported from Vševěd) ---
 
 class Otazka(db.Model):
     """
-    Model pro jednotlivou kvízovou otázku.
-    Text otázky musí být unikátní.
+    Model for an individual quiz question.
+    The question text must be unique.
     """
     __tablename__ = "otazky"
 
@@ -39,13 +39,13 @@ class Otazka(db.Model):
     obtiznost: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     zdroj_url: Mapped[str] = mapped_column(Text, nullable=True)
 
-    # Vztah pro spojovací tabulku (aby se dalo snadno smazat)
+    # Relationship for the association table (for easy deletion)
     kvizy_v_kterych_je = relationship("KvizOtazky", back_populates="otazka", cascade="all, delete-orphan")
 
 class Kviz(db.Model):
     """
-    Model pro jeden kvíz (sada otázek).
-    Název kvízu musí být unikátní.
+    Model for a single quiz (a set of questions).
+    The quiz name must be unique.
     """
     __tablename__ = "kvizy"
 
@@ -56,18 +56,18 @@ class Kviz(db.Model):
         Integer, nullable=False, default=DEFAULT_QUESTION_TIME_LIMIT
     )
 
-    # Vztah (relationship) pro přístup k otázkám přes spojovací tabulku
+    # Relationship to access questions via the association table
     otazky_v_kvizu = relationship(
         "KvizOtazky",
         back_populates="kviz",
         cascade="all, delete-orphan",
-        order_by="KvizOtazky.poradi"  # Klíčové: zajistí správné pořadí
+        order_by="KvizOtazky.poradi"  # Crucial: ensures correct question order
     )
 
 class KvizOtazky(db.Model):
     """
-    Spojovací tabulka (Association Table) mezi Kvízy a Otázkami.
-    Udržuje pořadí otázek v daném kvízu.
+    Association Table between Kvizy and Otazky.
+    Maintains the order of questions in a quiz.
     """
     __tablename__ = "kviz_otazky"
     __table_args__ = (
@@ -79,16 +79,16 @@ class KvizOtazky(db.Model):
     otazka_id_fk: Mapped[int] = mapped_column(ForeignKey("otazky.id"))
     poradi: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    # Vztahy (relationships) pro snadný přístup k objektům
+    # Relationships for easy access to objects
     kviz: Mapped["Kviz"] = relationship("Kviz", back_populates="otazky_v_kvizu")
     otazka: Mapped["Otazka"] = relationship("Otazka", back_populates="kvizy_v_kterych_je")
 
-# --- Modely pro Herní Logiku (MVP) ---
+# --- Models for Game Logic (MVP) ---
 
 class GameSession(db.Model):
     """
-    Model pro jednu rozehranou hru (herní sezení).
-    Pro MVP je session_id náš "anonymní uživatel".
+    Model for a single active game (a game session).
+    For MVP, session_id is our "anonymous user".
     """
     __tablename__ = "game_sessions"
 
@@ -103,24 +103,24 @@ class GameSession(db.Model):
     )
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
 
-    # Vztah pro snadný přístup k informacím o kvízu
+    # Relationship for easy access to quiz info
     kviz: Mapped["Kviz"] = relationship("Kviz")
 
 def init_app(app: Flask) -> None:
     """
-    Inicializuje SQLAlchemy rozšíření s danou Flask aplikací
-    a zaregistruje CLI příkaz 'init-db'.
+    Initializes the SQLAlchemy extension with the given Flask app
+    and registers the 'init-db' CLI command.
     """
     db.init_app(app)
 
     @app.cli.command("init-db")
     def init_db_command():
-        """Vytvoří databázové tabulky."""
+        """Creates the database tables."""
         with app.app_context():
             db.create_all()
-        print("Databáze úspěšně inicializována.")
+        print("Database initialized successfully.")
 
-# Zajistíme podporu pro cizí klíče (FOREIGN KEYs) ve SQLite
+# Ensure SQLite enforces FOREIGN KEY constraints
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     if dbapi_connection.__class__.__module__ == "sqlite3":
