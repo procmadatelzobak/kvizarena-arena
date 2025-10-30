@@ -28,7 +28,12 @@ Toto je backendový server pro projekt KvízAréna, určený pro hraní kvízů.
     pip install -r requirements.txt
     ```
 
-4.  **Spuštění aplikace:**
+4.  **Inicializace databáze:**
+    ```bash
+    flask --app app init-db
+    ```
+
+5.  **Spuštění aplikace:**
     ```bash
     flask run
     ```
