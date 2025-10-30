@@ -37,7 +37,7 @@
             </div>
           {% endif %}
         {% endwith %}
-        
+
         <div style="display: flex; gap: 20px; flex-wrap: wrap;">
             <div class="card" style="flex: 1;">
                 <h2>Vytvořit nový kvíz</h2>
@@ -57,6 +57,7 @@
                     <button type="submit">Vytvořit kvíz</button>
                 </form>
             </div>
+
             <div class="card" style="flex: 1;">
                 <h2>Importovat kvíz z CSV</h2>
                 <form action="{{ url_for('admin.import_quiz_csv') }}" method="POST" enctype="multipart/form-data">
@@ -68,7 +69,7 @@
                         <label for="import_quiz_description">Popis (volitelný):</label>
                         <textarea id="import_quiz_description" name="quiz_description" rows="1"></textarea>
                     </div>
-                    <div class="form-group">
+                     <div class="form-group">
                         <label for="import_time_limit">Čas na otázku (sekundy):</label>
                         <input type="number" id="import_time_limit" name="time_limit" value="15" required>
                     </div>
@@ -80,6 +81,7 @@
                 </form>
             </div>
         </div>
+
         <div class="card">
             <h2>Existující kvízy</h2>
             {% if quizzes_with_counts %}
@@ -101,10 +103,10 @@
                         <td>{{ item.pocet_otazek }}</td>
                         <td>{{ item.kviz.time_limit_per_question }}</td>
                         <td>
-                            <form action="{{ url_for('admin.delete_quiz_route', kviz_id=item.kviz.kviz_id) }}" method="POST" onsubmit="return confirm('Opravdu chcete smazat kvíz \"{{ item.kviz.nazev }}\"?');">
+                            <form action="{{ url_for('admin.delete_quiz_route', kviz_id=item.kviz.kviz_id) }}" method="POST" onsubmit="return confirm('Opravdu chcete smazat kvíz \'{{ item.kviz.nazev }}\'?');">
                                 <button type="submit" class="delete-button">Smazat</button>
                             </form>
-                        </td>
+                            </td>
                     </tr>
                     {% endfor %}
                 </tbody>
