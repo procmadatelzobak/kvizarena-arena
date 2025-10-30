@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <title>Správa kvízů</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        background-color: #f7f7f7;
+      }
+      header {
+        margin-bottom: 2rem;
+      }
+      section {
+        background-color: #fff;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+      th,
+      td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      input,
+      textarea,
+      button {
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
+      }
+      button {
+        width: fit-content;
+        cursor: pointer;
+      }
+      .flash {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+      }
+      .flash.success {
+        background-color: #d1fae5;
+        color: #065f46;
+      }
+      .flash.error {
+        background-color: #fee2e2;
+        color: #991b1b;
+      }
+      .flash.warning {
+        background-color: #fef3c7;
+        color: #92400e;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Administrace kvízů</h1>
+      <p>Vytvářejte nové kvízy, importujte otázky z CSV a spravujte existující.</p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section>
+          <h2>Stavové zprávy</h2>
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <section>
+      <h2>Existující kvízy</h2>
+      {% if quizzes_with_counts %}
+        <table>
+          <thead>
+            <tr>
+              <th>Název</th>
+              <th>Popis</th>
+              <th>Otázek</th>
+              <th>Časový limit</th>
+              <th>Akce</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in quizzes_with_counts %}
+              <tr>
+                <td>{{ item.kviz.nazev }}</td>
+                <td>{{ item.kviz.popis or "Bez popisu" }}</td>
+                <td>{{ item.pocet_otazek }}</td>
+                <td>{{ item.kviz.time_limit_per_question }} s / otázka</td>
+                <td>
+                  <form
+                    action="{{ url_for('admin.delete_quiz_route', kviz_id=item.kviz.kviz_id) }}"
+                    method="post"
+                    onsubmit="return confirm('Opravdu chcete smazat kvíz {{ item.kviz.nazev }}?');"
+                  >
+                    <button type="submit">Smazat</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>Zatím nebyly vytvořeny žádné kvízy.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Vytvořit nový kvíz</h2>
+      <form action="{{ url_for('admin.kvizy_route') }}" method="post">
+        <label>
+          Název kvízu
+          <input type="text" name="quiz_name" required />
+        </label>
+        <label>
+          Popis
+          <textarea name="quiz_description" rows="3"></textarea>
+        </label>
+        <label>
+          Časový limit na otázku (v sekundách)
+          <input type="number" name="time_limit" min="5" value="15" />
+        </label>
+        <button type="submit">Vytvořit kvíz</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Import kvízu z CSV</h2>
+      <form action="{{ url_for('admin.import_quiz_csv') }}" method="post" enctype="multipart/form-data">
+        <label>
+          Název kvízu
+          <input type="text" name="quiz_name" required />
+        </label>
+        <label>
+          Popis
+          <textarea name="quiz_description" rows="3"></textarea>
+        </label>
+        <label>
+          Časový limit na otázku (v sekundách)
+          <input type="number" name="time_limit" min="5" value="15" />
+        </label>
+        <label>
+          CSV soubor (export z Vševěda)
+          <input type="file" name="csv_file" accept=".csv" required />
+        </label>
+        <p>
+          Očekávané sloupce: <code>otazka</code>, <code>spravna_odpoved</code>,
+          <code>spatna_odpoved1</code>, <code>spatna_odpoved2</code>, <code>spatna_odpoved3</code>,
+          volitelně <code>tema</code>, <code>obtiznost</code>, <code>zdroj_url</code>.
+        </p>
+        <button type="submit">Importovat</button>
+      </form>
+    </section>
+  </body>
+</html>

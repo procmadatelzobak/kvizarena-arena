@@ -32,3 +32,16 @@ Toto je backendový server pro projekt KvízAréna, určený pro hraní kvízů.
     ```bash
     flask run
     ```
+
+## Administrátorské rozhraní
+
+Po spuštění serveru je možné otevřít administraci na adrese `http://localhost:5000/admin/kvizy`.
+Rozhraní umožňuje:
+
+* zobrazit existující kvízy včetně počtu přiřazených otázek a mazat je,
+* vytvořit nový kvíz pomocí jednoduchého formuláře,
+* importovat kvíz z CSV souboru. CSV musí obsahovat sloupce `otazka`, `spravna_odpoved`,
+  `spatna_odpoved1`, `spatna_odpoved2`, `spatna_odpoved3` a volitelně `tema`, `obtiznost`,
+  `zdroj_url`.
+
+Při importu se existující otázky (podle textu) znovu nevytvářejí, místo toho se znovu využijí.

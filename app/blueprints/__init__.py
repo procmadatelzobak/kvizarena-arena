@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from flask import Blueprint, Flask, jsonify
 
+from .admin import create_admin_blueprint
+
 
 def register_blueprints(app: Flask) -> None:
     """Register application blueprints."""
     app.register_blueprint(create_health_blueprint())
+    app.register_blueprint(create_admin_blueprint())
 
 
 def create_health_blueprint() -> Blueprint:
