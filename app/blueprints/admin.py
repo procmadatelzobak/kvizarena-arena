@@ -1,35 +1,32 @@
 """
-Admin blueprint pro KvízArénu.
+Admin blueprint for KvízAréna.
 
-Obsluhuje správu kvízů, mazání a klíčovou funkci
-pro import kvízů z CSV (exportovaných z Vševěda).
+Handles quiz management, deletion, and the crucial function
+for importing quizzes from CSV (exported from Vševěd).
 """
 import csv
 import io
 import logging
-
 from flask import (
     Blueprint, render_template, request,
     flash, redirect, url_for
 )
-
+from werkzeug.utils import secure_filename
 from app.database import db, Otazka, Kviz, KvizOtazky
 
-LOGGER = logging.getLogger(__name__)
-
-# Vytvoření Blueprintu
+# Create the Blueprint
 admin_bp = Blueprint(
     'admin',
     __name__,
-    url_prefix='/admin',  # Všechny routy v tomto blueprintu budou začínat /admin
-    template_folder='../templates/admin' # Šablony pro tento blueprint budou v app/templates/admin/
+    url_prefix='/admin',  # All routes in this blueprint will start with /admin
+    template_folder='../templates/admin' # Templates will be in app/templates/admin/
 )
 
 @admin_bp.route('/kvizy', methods=['GET', 'POST'])
 def kvizy_route():
     """
-    Zobrazí seznam kvízů a zpracuje vytvoření nového.
-    (Převzato z Vševěda a upraveno pro SQLAlchemy)
+    Displays the list of quizzes and handles new quiz creation.
+    (Adapted from Vševěd and converted to SQLAlchemy)
     """
     if request.method == 'POST':
         nazev = request.form.get('quiz_name')
@@ -37,12 +34,12 @@ def kvizy_route():
         time_limit = request.form.get('time_limit', 15)
 
         if not nazev:
-            flash("Název kvízu nesmí být prázdný.", "warning")
+            flash("Quiz name cannot be empty.", "warning")
         else:
-            # Zkontrolujeme, zda kvíz již neexistuje
+            # Check if quiz already exists
             existing_quiz = Kviz.query.filter_by(nazev=nazev).first()
             if existing_quiz:
-                flash(f"Kvíz s názvem '{nazev}' již existuje.", "error")
+                flash(f"A quiz with the name '{nazev}' already exists.", "error")
             else:
                 try:
                     new_quiz = Kviz(
@@ -52,16 +49,15 @@ def kvizy_route():
                     )
                     db.session.add(new_quiz)
                     db.session.commit()
-                    flash(f"Kvíz '{nazev}' byl úspěšně vytvořen.", "success")
+                    flash(f"Quiz '{nazev}' was successfully created.", "success")
                     return redirect(url_for('admin.kvizy_route'))
-                except Exception as e:  # noqa: BLE001 - chceme zachytit všechny chyby kvůli rollbacku
+                except Exception as e:
                     db.session.rollback()
-                    LOGGER.exception("Došlo k chybě při vytváření kvízu '%s'", nazev)
-                    flash(f"Došlo k chybě při vytváření kvízu: {e}", "error")
+                    flash(f"An error occurred while creating the quiz: {e}", "error")
 
     # GET request
     all_quizzes = Kviz.query.order_by(Kviz.nazev).all()
-    # Pro každý kvíz spočítáme otázky (efektivněji)
+    # To display question counts, we fetch them efficiently
     quizzes_with_counts = []
     for quiz in all_quizzes:
         count = db.session.query(KvizOtazky).filter_by(kviz_id_fk=quiz.kviz_id).count()
@@ -75,26 +71,25 @@ def kvizy_route():
 @admin_bp.route('/kviz/delete/<int:kviz_id>', methods=['POST'])
 def delete_quiz_route(kviz_id: int):
     """
-    Smaže kvíz. (Převzato z Vševěda a upraveno pro SQLAlchemy)
-    Díky 'cascade' v modelu se smažou i vazby v KvizOtazky.
+    Deletes a quiz. (Adapted from Vševěd)
+    Thanks to 'cascade' in the model, this also deletes entries in KvizOtazky.
     """
     quiz_to_delete = Kviz.query.get_or_404(kviz_id)
     try:
         db.session.delete(quiz_to_delete)
         db.session.commit()
-        flash(f"Kvíz '{quiz_to_delete.nazev}' byl úspěšně smazán.", "success")
-    except Exception as e:  # noqa: BLE001 - chceme zachytit všechny chyby kvůli rollbacku
+        flash(f"Quiz '{quiz_to_delete.nazev}' was successfully deleted.", "success")
+    except Exception as e:
         db.session.rollback()
-        LOGGER.exception("Chyba při mazání kvízu %s", kviz_id)
-        flash(f"Chyba při mazání kvízu: {e}", "error")
+        flash(f"Error deleting quiz: {e}", "error")
     
     return redirect(url_for('admin.kvizy_route'))
 
 @admin_bp.route('/kviz/import', methods=['POST'])
 def import_quiz_csv():
     """
-    Zpracuje nahraný CSV soubor a vytvoří nový kvíz.
-    (Převzato z Vševěda a upraveno pro SQLAlchemy)
+    Processes an uploaded CSV file and creates a new quiz.
+    (Adapted from Vševěd and converted to SQLAlchemy)
     """
     quiz_name = request.form.get('quiz_name', '').strip()
     quiz_description = request.form.get('quiz_description', '').strip()
@@ -102,29 +97,30 @@ def import_quiz_csv():
     file = request.files.get('csv_file')
 
     if not quiz_name or not file or file.filename == '':
-        flash("Název kvízu a CSV soubor jsou povinné.", "error")
+        flash("Quiz name and CSV file are required.", "error")
         return redirect(url_for('admin.kvizy_route'))
 
-    # Zkontrolujeme, zda kvíz již neexistuje
+    # Check if quiz name already exists
     if Kviz.query.filter_by(nazev=quiz_name).first():
-        flash(f"Kvíz s názvem '{quiz_name}' již existuje. Zvolte jiný název.", "error")
+        flash(f"A quiz with the name '{quiz_name}' already exists. Choose another name.", "error")
         return redirect(url_for('admin.kvizy_route'))
 
     if not file.filename.lower().endswith('.csv'):
-        flash("Nepodporovaný typ souboru. Prosím, nahrajte soubor .csv.", "error")
+        flash("Unsupported file type. Please upload a .csv file.", "error")
         return redirect(url_for('admin.kvizy_route'))
 
     try:
-        # 1. Vytvoříme nový kvíz
+        # 1. Create the new quiz
         new_quiz = Kviz(
             nazev=quiz_name,
             popis=quiz_description,
             time_limit_per_question=int(time_limit)
         )
         db.session.add(new_quiz)
-        db.session.commit()  # Musíme commitnout, abychom získali new_quiz.kviz_id
+        db.session.commit()  # Commit to get the new_quiz.kviz_id
 
-        # 2. Zpracujeme CSV
+        # 2. Process the CSV
+        # Use UTF-8-SIG to handle potential BOM from Excel
         stream = io.StringIO(file.stream.read().decode("UTF-8-SIG"), newline=None)
         csv_reader = csv.DictReader(stream)
         
@@ -134,55 +130,52 @@ def import_quiz_csv():
 
         for row in csv_reader:
             if not all(col in row and row[col] for col in required_columns):
-                LOGGER.warning("Přeskakuji řádek v CSV kvůli chybějícím datům: %s", row)
+                logging.warning(f"Skipping CSV row due to missing data: {row}")
                 continue
 
-            # 3. Najdeme otázku v DB nebo ji vytvoříme
+            # 3. Find the question in the DB or create it
             otazka_text = row['otazka'].strip()
             existing_question = Otazka.query.filter_by(otazka=otazka_text).first()
             
             if existing_question:
                 question_id = existing_question.id
             else:
-                # Otázka neexistuje, vytvoříme ji
+                # Question doesn't exist, create it
                 new_question = Otazka(
                     otazka=otazka_text,
                     spravna_odpoved=row['spravna_odpoved'].strip(),
                     spatna_odpoved1=row['spatna_odpoved1'].strip(),
                     spatna_odpoved2=row['spatna_odpoved2'].strip(),
                     spatna_odpoved3=row['spatna_odpoved3'].strip(),
-                    tema=row.get('tema', 'Importováno').strip(),
+                    tema=row.get('tema', 'Imported').strip(),
                     obtiznost=int(row.get('obtiznost', 3)),
                     zdroj_url=row.get('zdroj_url', '').strip()
                 )
                 db.session.add(new_question)
-                db.session.commit() # Commitneme, abychom dostali ID
+                db.session.commit() # Commit to get the ID
                 question_id = new_question.id
             
             questions_to_link.append(question_id)
 
-        # 4. Přidáme všechny otázky do kvízu se správným pořadím
+        # 4. Link all questions to the quiz with correct ordering
         for index, q_id in enumerate(questions_to_link):
-            vazba = KvizOtazky(
+            association = KvizOtazky(
                 kviz_id_fk=new_quiz.kviz_id,
                 otazka_id_fk=q_id,
                 poradi=index + 1
             )
-            db.session.add(vazba)
+            db.session.add(association)
         
         db.session.commit()
-        flash(f"Kvíz '{quiz_name}' úspěšně importován s {len(questions_to_link)} otázkami.", "success")
+        flash(f"Quiz '{quiz_name}' successfully imported with {len(questions_to_link)} questions.", "success")
         
-    except Exception as e:  # noqa: BLE001 - chceme zachytit všechny chyby kvůli rollbacku
+    except Exception as e:
         db.session.rollback()
-        LOGGER.exception("Chyba při importu CSV: %s", e)
-        flash(f"Neočekávaná chyba při importu: {e}", "error")
-        # Pokud se import pokazil, smažeme i právě vytvořený kvíz
+        logging.error(f"Error during CSV import: {e}", exc_info=True)
+        flash(f"An unexpected error occurred during import: {e}", "error")
+        # If import failed, delete the quiz entry we just created
         if 'new_quiz' in locals() and new_quiz.kviz_id:
-            try:
-                db.session.delete(new_quiz)
-                db.session.commit()
-            except Exception:  # noqa: BLE001 - chceme zachytit všechny chyby kvůli rollbacku
-                db.session.rollback()
+            db.session.delete(new_quiz)
+            db.session.commit()
 
     return redirect(url_for('admin.kvizy_route'))
