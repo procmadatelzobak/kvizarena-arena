@@ -1,60 +1,34 @@
-# Kvizarena
+# KvízAréna - Herní Server (Aréna)
 
-Initial project scaffolding for the Kvizarena application. The stack is centred around a Flask
-application with SQLAlchemy for persistence. The repository is structured to encourage modular
-blueprints, dedicated static and template directories, and an extensible testing setup.
+Toto je backendový server pro projekt KvízAréna, určený pro hraní kvízů. Jedná se o samostatnou Flask aplikaci, která obsluhuje herní logiku, spravuje databázi kvízů a (v budoucnu) profily hráčů.
 
-## Project structure
+## Klíčové vlastnosti
 
-```
-.
-├── app
-│   ├── __init__.py
-│   ├── app.py
-│   ├── blueprints
-│   │   └── __init__.py
-│   ├── database.py
-│   ├── static
-│   └── templates
-├── requirements.txt
-├── tests
-│   ├── __init__.py
-│   └── test_app.py
-├── .env.example
-├── .gitignore
-└── README.md
-```
+* **Zabezpečená herní logika:** Server validuje všechny odpovědi. Klient nikdy nezná správnou odpověď předem.
+* **Časové limity:** Server hlídá časové limity pro odpovědi na otázky.
+* **Správa kvízů:** Administrátorské rozhraní pro import kvízů ve formátu CSV (exportovaných z modulu Vševěd).
+* **Herní API:** REST API pro komunikaci s webovým/mobilním klientem (PWA).
 
-## Getting started
+## Nastavení a spuštění (MVP)
 
-1. **Create and activate a virtual environment:**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   ```
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. **Set environment variables:**
-   Copy `.env.example` to `.env` and adjust the values as needed.
+1.  **Klonování repozitáře:**
+    ```bash
+    git clone [URL_VAŠEHO_REPOZITÁŘE]
+    cd kvizarena-arena
+    ```
 
-4. **Run the development server:**
-   ```bash
-   flask --app app.app run --debug
-   ```
+2.  **Vytvoření virtuálního prostředí:**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # (Nebo venv\Scripts\activate.bat na Windows)
+    ```
 
-5. **Execute the test suite:**
-   ```bash
-   pytest
-   ```
+3.  **Instalace závislostí:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-## Branching workflow
-
-The repository follows a four-branch workflow:
-
-- `server` and `client` branches branch off from `dev`.
-- Changes from `server` or `client` merge into `dev`.
-- The `master` branch stays stable and only receives code promoted from `dev`.
-
-Ensure documentation updates accompany each change to keep the workflow transparent.
+4.  **Spuštění aplikace:**
+    ```bash
+    flask run
+    ```
