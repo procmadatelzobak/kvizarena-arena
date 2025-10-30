@@ -9,6 +9,20 @@ Toto je backendový server pro projekt KvízAréna, určený pro hraní kvízů.
 * **Správa kvízů:** Administrátorské rozhraní pro import kvízů ve formátu CSV (exportovaných z modulu Vševěd).
 * **Herní API:** REST API pro komunikaci s webovým/mobilním klientem (PWA).
 
+## Automatická instalace na Ubuntu 25.10+
+
+Pro rychlé zprovoznění serveru na Ubuntu 25.10 a novějším můžete použít skript
+`scripts/install_server.sh`, který provede veškeré kroky za vás:
+
+```bash
+chmod +x scripts/install_server.sh
+./scripts/install_server.sh
+```
+
+Skript aktualizuje systémové balíčky, vytvoří (nebo znovu použije) virtuální
+prostředí, nainstaluje závislosti z `requirements.txt` a připraví `.env` soubor
+na základě šablony `.env.example` včetně vygenerování nového `SECRET_KEY`.
+
 ## Nastavení a spuštění (MVP)
 
 1.  **Klonování repozitáře:**
