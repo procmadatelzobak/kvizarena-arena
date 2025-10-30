@@ -44,4 +44,8 @@ Rozhraní umožňuje:
   `spatna_odpoved1`, `spatna_odpoved2`, `spatna_odpoved3` a volitelně `tema`, `obtiznost`,
   `zdroj_url`.
 
+Sekce pro vytváření a import kvízů jsou zobrazeny v samostatných kartách vedle sebe a stránka
+navíc zvýrazňuje flash zprávy (úspěch/varování/chyba), aby administrátor okamžitě viděl výsledek
+provedené akce.
+
 Při importu se existující otázky (podle textu) znovu nevytvářejí, místo toho se znovu využijí.
