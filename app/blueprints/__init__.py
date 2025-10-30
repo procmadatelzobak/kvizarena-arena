@@ -1,4 +1,8 @@
-"""Blueprint registration for Kvizarena."""
+"""Blueprint registration for Kvizarena.
+
+Tento soubor importuje a registruje všechny Blueprints
+do hlavní Flask aplikace.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,7 @@ from .admin import admin_bp
 
 
 def register_blueprints(app: Flask) -> None:
-    """Register application blueprints."""
+    """Registrace všech blueprintů aplikace."""
 
     # Základní health-check
     app.register_blueprint(create_health_blueprint())
