@@ -6,6 +6,7 @@ for the main Flask application.
 """
 
 from __future__ import annotations
+
 from flask import Blueprint, Flask, jsonify
 
 # Import new blueprints here
