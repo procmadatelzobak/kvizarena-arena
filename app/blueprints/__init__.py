@@ -1,31 +1,32 @@
-"""Blueprint registration for Kvizarena.
+"""
+Blueprint registration for Kvizarena.
 
-Tento soubor importuje a registruje všechny Blueprints
-do hlavní Flask aplikace.
+This file imports and registers all Blueprints
+for the main Flask application.
 """
 
 from __future__ import annotations
 
 from flask import Blueprint, Flask, jsonify
 
-# Importujte nové blueprinty zde
+# Import new blueprints here
 from .admin import admin_bp
 
 
 def register_blueprints(app: Flask) -> None:
-    """Registrace všech blueprintů aplikace."""
-
-    # Základní health-check
+    """Register all application blueprints."""
+    
+    # Basic health-check
     app.register_blueprint(create_health_blueprint())
-
-    # Nový admin blueprint
+    
+    # New admin blueprint
     app.register_blueprint(admin_bp)
-
-    # Zde budou v budoucnu další (např. game_api_bp)
+    
+    # Future blueprints (e.g., game_api_bp) will go here
 
 
 def create_health_blueprint() -> Blueprint:
-    """Vytvoří základní health-check blueprint."""
+    """Creates a basic health-check blueprint."""
     blueprint = Blueprint("health", __name__)
 
     @blueprint.get("/health")
