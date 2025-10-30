@@ -30,8 +30,14 @@ Toto je backendový server pro projekt KvízAréna, určený pro hraní kvízů.
 
 4.  **Spuštění aplikace:**
     ```bash
-    flask run
+    ./run.sh
     ```
+
+    Spouštěcí skript automaticky aktivuje vytvořené virtuální prostředí, ověří existenci
+    databázového souboru z hodnoty `DATABASE_URL` v souboru `.env` (nebo použije výchozí
+    `kvizarena.db`) a v případě potřeby databázi inicializuje příkazem `flask init-db`.
+    Server následně spustí ve vývojovém režimu na portu definovaném proměnnou `PORT` (výchozí
+    `5000`).
 
 ## Administrátorské rozhraní
 
