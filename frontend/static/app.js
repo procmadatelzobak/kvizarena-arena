@@ -209,13 +209,10 @@ function showFeedback(data) {
     const answersContainer = document.getElementById('answers-container');
     const buttons = answersContainer.querySelectorAll('.answer-button');
     
-    // Find and highlight the buttons
+    // Highlight the correct answer
     buttons.forEach(btn => {
         if (btn.textContent === data.correct_answer) {
             btn.classList.add('correct');
-        } else if (btn.textContent !== data.correct_answer && !data.is_correct) {
-            // If answer was wrong, we might want to highlight what they picked
-            // But we need to track which button was clicked
         }
     });
     
