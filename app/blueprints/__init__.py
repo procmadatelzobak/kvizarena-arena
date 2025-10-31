@@ -7,7 +7,7 @@ for the main Flask application.
 
 from __future__ import annotations
 
-from flask import Blueprint, Flask, jsonify, redirect, url_for
+from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template
 
 # Import new blueprints here
 from .admin import admin_bp
@@ -46,7 +46,7 @@ def create_main_blueprint() -> Blueprint:
 
     @blueprint.get("/")
     def index():
-        # Redirect the root URL to the admin quiz page
-        return redirect(url_for('admin.kvizy_route'))
+        # Serve the main frontend application
+        return render_template('index.html')
 
     return blueprint

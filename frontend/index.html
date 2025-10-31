@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KvízAréna</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/static/style.css">
+    <meta name="theme-color" content="#007bff">
+</head>
+<body>
+    <div id="app">
+        <!-- Screen 1: Quiz List -->
+        <div id="screen-quiz-list">
+            <h2>Načítám kvízy...</h2>
+        </div>
+
+        <!-- Screen 2: Game (Initially Hidden) -->
+        <div id="screen-game" class="hidden">
+            <div id="game-header">
+                <h2 id="quiz-title"></h2>
+                <div id="game-stats">
+                    <span id="question-number"></span>
+                    <span id="score-display"></span>
+                    <span id="time-limit"></span>
+                </div>
+            </div>
+            <div id="question-container">
+                <h3 id="question-text"></h3>
+                <div id="answers-container"></div>
+            </div>
+        </div>
+
+        <!-- Screen 3: Results (Initially Hidden) -->
+        <div id="screen-results" class="hidden">
+            <h2>Výsledky</h2>
+            <div id="results-container"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

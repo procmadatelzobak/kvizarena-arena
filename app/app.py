@@ -16,7 +16,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     """Create and configure the Flask application instance."""
     load_dotenv()
 
-    app = Flask(__name__, instance_relative_config=False)
+    app = Flask(__name__, instance_relative_config=False, template_folder='../frontend', static_folder='../frontend/static')
 
     app.config.setdefault("SECRET_KEY", os.getenv("SECRET_KEY", "dev"))
     app.config.setdefault(

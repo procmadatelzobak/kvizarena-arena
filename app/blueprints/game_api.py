@@ -42,6 +42,25 @@ def _get_total_questions(kviz_id: int) -> int:
     """Helper to get total question count for a quiz."""
     return db.session.query(KvizOtazky).filter_by(kviz_id_fk=kviz_id).count()
 
+@game_api_bp.route('/quizzes', methods=['GET'])
+def get_quizzes():
+    """
+    Returns a list of all available quizzes.
+    Each quiz includes: id, nazev, popis, pocet_otazek.
+    """
+    quizzes = Kviz.query.all()
+    
+    result = []
+    for kviz in quizzes:
+        result.append({
+            "id": kviz.kviz_id,
+            "nazev": kviz.nazev,
+            "popis": kviz.popis,
+            "pocet_otazek": _get_total_questions(kviz.kviz_id)
+        })
+    
+    return jsonify(result), 200
+
 @game_api_bp.route('/start/<int:quiz_id>', methods=['POST'])
 def start_game(quiz_id: int):
     """
