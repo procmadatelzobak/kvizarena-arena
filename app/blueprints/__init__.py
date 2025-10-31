@@ -7,7 +7,7 @@ for the main Flask application.
 
 from __future__ import annotations
 
-from flask import Blueprint, Flask, jsonify
+from flask import Blueprint, Flask, jsonify, redirect, url_for
 
 # Import new blueprints here
 from .admin import admin_bp
@@ -18,6 +18,9 @@ def register_blueprints(app: Flask) -> None:
     
     # Basic health-check
     app.register_blueprint(create_health_blueprint())
+    
+    # Main blueprint for root URL redirect
+    app.register_blueprint(create_main_blueprint())
     
     # New admin blueprint
     app.register_blueprint(admin_bp)
@@ -32,5 +35,16 @@ def create_health_blueprint() -> Blueprint:
     @blueprint.get("/health")
     def health() -> tuple[dict[str, str], int]:
         return jsonify(status="ok"), 200
+
+    return blueprint
+
+def create_main_blueprint() -> Blueprint:
+    """Creates the main blueprint for homepage redirect."""
+    blueprint = Blueprint("main", __name__)
+
+    @blueprint.get("/")
+    def index():
+        # Redirect the root URL to the admin quiz page
+        return redirect(url_for('admin.kvizy_route'))
 
     return blueprint

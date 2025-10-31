@@ -18,6 +18,10 @@ source $VENV_PATH
 # Přesun do adresáře se skriptem
 cd "$SCRIPT_DIR"
 
+# Nastavení proměnných prostředí pro Flask
+export FLASK_APP=app
+export FLASK_DEBUG=1
+
 # Zjistíme název DB ze souboru .env, abychom mohli zkontrolovat její existenci
 DB_URL=$(grep "DATABASE_URL=" .env | cut -d'=' -f2)
 # Získáme cestu za 'sqlite:///'
@@ -32,11 +36,12 @@ if [ ! -f "$DB_FILE" ]; then
     echo "POZOR: Databáze '$DB_FILE' nebyla nalezena."
     echo "Spouštím inicializaci databáze (flask init-db)..."
     # 'flask init-db' zavolá příkaz, který definujeme v app/database.py
+    # Nyní bude fungovat díky 'export FLASK_APP=app'
     flask init-db
     if [ $? -eq 0 ]; then
         echo "Databáze úspěšně vytvořena."
     else
-        echo "CHYBA: Selhala inicializace databáze. (Příkaz 'init-db' ještě není definován?)"
+        echo "CHYBA: Selhala inicializace databáze."
         exit 1
     fi
 fi
@@ -50,5 +55,5 @@ PORT=$(grep "PORT=" .env | cut -d'=' -f2)
 echo "Aplikace poběží na: http://0.0.0.0:$PORT"
 echo "(Pro produkční nasazení použijte gunicorn nebo waitress)"
 
-# Spustí aplikaci z továrničky
-python3 -m app.app
+# Spustí aplikaci standardním způsobem
+flask run --host=0.0.0.0 --port=$PORT
