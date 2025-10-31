@@ -86,7 +86,7 @@ def submit_answer():
     if not session_id:
         return jsonify({"error": "Missing session_id"}), 400
     
-    if not answer_text:
+    if answer_text is None:
         return jsonify({"error": "Missing answer_text"}), 400
 
     # 1. Find the active session
@@ -98,16 +98,9 @@ def submit_answer():
     if not session:
         return jsonify({"error": "Invalid or expired session"}), 404
 
-    # 2. Check time limit
+    # 2. Check time limit and get current question
     time_limit = session.kviz.time_limit_per_question
     time_taken = int(time.time()) - session.last_question_timestamp
-    
-    if time_taken > time_limit:
-        is_correct = False
-        feedback = "Time's up!"
-    else:
-        is_correct = False
-        feedback = "Incorrect"
     
     # 3. Get the *current* question from the session
     current_poradi = session.current_question_index + 1
@@ -122,13 +115,18 @@ def submit_answer():
     
     question = question_assoc.otazka
     
-    # 4. Check if the answer is correct (if time is not up)
-    if time_taken <= time_limit:
-        # Check if the submitted answer text matches the correct answer
-        if answer_text == question.spravna_odpoved:
-            is_correct = True
-            feedback = "Correct!"
-            session.score += 1
+    # 4. Evaluate answer correctness
+    is_correct = False
+    feedback = "Incorrect"
+    
+    if time_taken > time_limit:
+        # Time's up - answer is incorrect regardless of content
+        feedback = "Time's up!"
+    elif answer_text == question.spravna_odpoved:
+        # Answer is correct and within time limit
+        is_correct = True
+        feedback = "Correct!"
+        session.score += 1
 
     # 5. Prepare for the *next* question
     session.current_question_index += 1
