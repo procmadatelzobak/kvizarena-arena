@@ -7,7 +7,7 @@ Handles the core gameplay logic:
 """
 import time
 import random
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
 from app.database import db, Kviz, KvizOtazky, GameSession, Otazka
 
 # Create the Blueprint
@@ -17,16 +17,30 @@ game_api_bp = Blueprint(
     url_prefix='/api/game'  # All routes will start with /api/game
 )
 
-def shuffle_answers(question: Otazka) -> list[dict]:
+def _shuffle_answers(question: Otazka) -> list[dict[str, str]]:
     """Helper function to shuffle answers and return them."""
     answers = [
-        {"id": "a", "text": question.spravna_odpoved},
-        {"id": "b", "text": question.spatna_odpoved1},
-        {"id": "c", "text": question.spatna_odpoved2},
-        {"id": "d", "text": question.spatna_odpoved3},
+        # We send the text, the client should send the text back.
+        # This is more robust than sending IDs (a,b,c,d).
+        {"text": question.spravna_odpoved},
+        {"text": question.spatna_odpoved1},
+        {"text": question.spatna_odpoved2},
+        {"text": question.spatna_odpoved3},
     ]
     random.shuffle(answers)
     return answers
+
+def _get_current_question(session: GameSession) -> KvizOtazky | None:
+    """Gets the current question association based on the session index."""
+    current_poradi = session.current_question_index + 1
+    return KvizOtazky.query.filter_by(
+        kviz_id_fk=session.kviz_id_fk,
+        poradi=current_poradi
+    ).first()
+
+def _get_total_questions(kviz_id: int) -> int:
+    """Helper to get total question count for a quiz."""
+    return db.session.query(KvizOtazky).filter_by(kviz_id_fk=kviz_id).count()
 
 @game_api_bp.route('/start/<int:quiz_id>', methods=['POST'])
 def start_game(quiz_id: int):
@@ -54,25 +68,24 @@ def start_game(quiz_id: int):
         db.session.add(new_session)
         db.session.commit() # Commit to get session_id
         
-        question = Otazka.query.get(first_question_assoc.otazka_id_fk)
+        question = first_question_assoc.otazka
+        total_questions = _get_total_questions(quiz.kviz_id)
         
         return jsonify({
             "session_id": new_session.session_id,
             "quiz_name": quiz.nazev,
             "time_limit": quiz.time_limit_per_question,
-            "total_questions": db.session.query(KvizOtazky).filter_by(kviz_id_fk=quiz.kviz_id).count(),
+            "total_questions": total_questions,
             "question": {
                 "number": 1,
                 "text": question.otazka,
-                "answers": shuffle_answers(question)
+                "answers": _shuffle_answers(question) # Send shuffled answers
             }
         }), 201 # 201 Created
 
     except Exception as e:
         db.session.rollback()
-        # Log the error internally but don't expose details to the user
-        print(f"Error starting game: {e}")  # In production, use proper logging
-        return jsonify({"error": "Could not start game"}), 500
+        return jsonify({"error": f"Could not start game: {e}"}), 500
 
 
 @game_api_bp.route('/answer', methods=['POST'])
@@ -83,13 +96,10 @@ def submit_answer():
     """
     data = request.get_json()
     session_id = data.get('session_id')
-    answer_text = data.get('answer_text')
+    answer_text = data.get('answer_text') # We expect the text of the answer
 
-    if not session_id:
-        return jsonify({"error": "Missing session_id"}), 400
-    
-    if answer_text is None:
-        return jsonify({"error": "Missing answer_text"}), 400
+    if not session_id or answer_text is None:
+        return jsonify({"error": "Missing session_id or answer_text"}), 400
 
     # 1. Find the active session
     session = GameSession.query.filter_by(
@@ -100,35 +110,33 @@ def submit_answer():
     if not session:
         return jsonify({"error": "Invalid or expired session"}), 404
 
-    # 2. Check time limit and get current question
-    time_limit = session.kviz.time_limit_per_question
-    time_taken = int(time.time()) - session.last_question_timestamp
-    
-    # 3. Get the *current* question from the session
-    current_poradi = session.current_question_index + 1
-    question_assoc = KvizOtazky.query.filter_by(
-        kviz_id_fk=session.kviz_id_fk,
-        poradi=current_poradi
-    ).first()
-
+    # 2. Get the *current* question from the session
+    question_assoc = _get_current_question(session)
     if not question_assoc:
-        # This should not happen if logic is correct
-        return jsonify({"error": "Question sequence error"}), 500
+        # This should not happen, but good to check
+        session.is_active = False
+        db.session.commit()
+        return jsonify({"error": "Question sequence error or quiz finished"}), 500
     
     question = question_assoc.otazka
+    quiz = session.kviz
+
+    # 3. Check time limit
+    time_limit = quiz.time_limit_per_question
+    time_taken = int(time.time()) - session.last_question_timestamp
     
-    # 4. Evaluate answer correctness
     is_correct = False
-    feedback = "Incorrect"
     
     if time_taken > time_limit:
-        # Time's up - answer is incorrect regardless of content
         feedback = "Time's up!"
-    elif answer_text == question.spravna_odpoved:
-        # Answer is correct and within time limit
-        is_correct = True
-        feedback = "Correct!"
-        session.score += 1
+    else:
+        # 4. Check if the answer is correct (and within time)
+        if answer_text == question.spravna_odpoved:
+            is_correct = True
+            feedback = "Correct!"
+            session.score += 1
+        else:
+            feedback = "Incorrect"
 
     # 5. Prepare for the *next* question
     session.current_question_index += 1
@@ -140,7 +148,7 @@ def submit_answer():
         poradi=next_poradi
     ).first()
     
-    total_questions = db.session.query(KvizOtazky).filter_by(kviz_id_fk=session.kviz_id_fk).count()
+    total_questions = _get_total_questions(quiz.kviz_id)
 
     # 6. Check if quiz is finished
     if not next_question_assoc:
@@ -169,7 +177,7 @@ def submit_answer():
         "next_question": {
             "number": next_poradi,
             "text": next_question.otazka,
-            "answers": shuffle_answers(next_question)
+            "answers": _shuffle_answers(next_question) # Shuffle new answers
         },
         "total_questions": total_questions
     })
