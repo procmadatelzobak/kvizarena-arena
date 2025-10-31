@@ -123,6 +123,7 @@ def init_app(app: Flask) -> None:
 # Ensure SQLite enforces FOREIGN KEY constraints
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
+    # Check if the connection is really SQLite
     if dbapi_connection.__class__.__module__ == "sqlite3":
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
