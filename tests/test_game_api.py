@@ -122,13 +122,11 @@ def test_submit_answer_time_limit(client, app):
     # 1. Start game
     response_start = client.post('/api/game/start/1')
     session_id = response_start.get_json()['session_id']
-    time_limit = response_start.get_json()['time_limit']
     
     # 2. Manually update timestamp in DB to simulate time running out
     with app.app_context():
-        session = GameSession.query.get(session_id)
-        # Set timestamp to be beyond the time limit (time_limit + 5 seconds ago)
-        session.last_question_timestamp = int(time.time()) - (time_limit + 5)
+        session = db.session.get(GameSession, session_id)
+        session.last_question_timestamp = int(time.time()) - 15 # 15s ago
         db.session.commit()
         
     # 3. Submit answer (even if correct, it's too late)
