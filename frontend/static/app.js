@@ -137,6 +137,13 @@ function renderQuestion(data) {
     // Update question text
     document.getElementById('question-text').textContent = questionData.text;
     
+    // Clear any previous feedback messages
+    const questionContainer = document.getElementById('question-container');
+    const oldFeedback = questionContainer.querySelector('.feedback-message');
+    if (oldFeedback) {
+        oldFeedback.remove();
+    }
+    
     // Render answers
     const answersContainer = document.getElementById('answers-container');
     answersContainer.innerHTML = '';

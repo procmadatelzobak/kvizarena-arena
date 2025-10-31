@@ -7,7 +7,7 @@ for the main Flask application.
 
 from __future__ import annotations
 
-from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template
+from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template, send_from_directory
 
 # Import new blueprints here
 from .admin import admin_bp
@@ -48,5 +48,15 @@ def create_main_blueprint() -> Blueprint:
     def index():
         # Serve the main frontend application
         return render_template('index.html')
+    
+    @blueprint.get("/manifest.json")
+    def manifest():
+        # Serve the PWA manifest
+        return send_from_directory('../frontend', 'manifest.json')
+    
+    @blueprint.get("/sw.js")
+    def service_worker():
+        # Serve the service worker
+        return send_from_directory('../frontend', 'sw.js')
 
     return blueprint
