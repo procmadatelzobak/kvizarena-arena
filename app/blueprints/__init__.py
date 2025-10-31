@@ -11,6 +11,7 @@ from flask import Blueprint, Flask, jsonify, redirect, url_for
 
 # Import new blueprints here
 from .admin import admin_bp
+from .game_api import game_api_bp
 
 
 def register_blueprints(app: Flask) -> None:
@@ -25,7 +26,8 @@ def register_blueprints(app: Flask) -> None:
     # New admin blueprint
     app.register_blueprint(admin_bp)
     
-    # Future blueprints (e.g., game_api_bp) will go here
+    # New Game API blueprint
+    app.register_blueprint(game_api_bp)
 
 
 def create_health_blueprint() -> Blueprint:

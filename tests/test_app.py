@@ -19,7 +19,9 @@ def test_blueprints_registered() -> None:
     
     # Verify expected blueprints are registered
     assert "health" in blueprint_names, "Health blueprint should be registered"
+    assert "main" in blueprint_names, "Main blueprint should be registered"
     assert "admin" in blueprint_names, "Admin blueprint should be registered"
+    assert "game_api" in blueprint_names, "Game API blueprint should be registered"
 
 
 def test_health_endpoint() -> None:
