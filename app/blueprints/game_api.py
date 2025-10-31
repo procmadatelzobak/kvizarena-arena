@@ -70,7 +70,9 @@ def start_game(quiz_id: int):
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Could not start game: {e}"}), 500
+        # Log the error internally but don't expose details to the user
+        print(f"Error starting game: {e}")  # In production, use proper logging
+        return jsonify({"error": "Could not start game"}), 500
 
 
 @game_api_bp.route('/answer', methods=['POST'])
