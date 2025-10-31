@@ -52,7 +52,7 @@ echo "Spouštím server KvízAréna (Flask development server)..."
 PORT=$(grep "PORT=" .env | cut -d'=' -f2)
 : ${PORT:=5000}
 
-echo "Aplikace poběží na: http://0.0.0.0:$PORT"
+echo "Aplikace poběží na: [http://0.0.0.0](http://0.0.0.0):$PORT"
 echo "(Pro produkční nasazení použijte gunicorn nebo waitress)"
 
 # Spustí aplikaci standardním způsobem
