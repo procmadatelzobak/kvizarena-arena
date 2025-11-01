@@ -62,8 +62,11 @@ def user_login():
             db.session.add(user)
             db.session.commit()
         except IntegrityError:
+            # Race condition: another request created this nickname simultaneously
             db.session.rollback()
-            return jsonify({"error": "Nickname already taken"}), 409
+            user = User.query.filter_by(nickname=nickname).first()
+            if not user:
+                return jsonify({"error": "Failed to create user"}), 500
 
     return jsonify({
         "user_id": user.id,
@@ -277,30 +280,15 @@ def submit_answer():
                 kviz_id_fk=session.kviz_id_fk
             ).delete()
 
-        # 6b. Save the new GameResult
-        try:
-            new_result = GameResult(
-                user_id_fk=session.user_id_fk,
-                kviz_id_fk=session.kviz_id_fk,
-                score=session.score,
-                total_questions=total_questions,
-                answer_log=session.answer_log
-            )
-            db.session.add(new_result)
-        except IntegrityError:
-            # This could happen if user plays twice simultaneously (race condition)
-            # or if they already played a 'no-retake' quiz.
-            db.session.rollback()
-            return jsonify({"error": "Could not save result."}), 500
-
-        # 6c. Calculate ranking statistics
+        # 6b. Calculate ranking statistics BEFORE adding new result
+        # This ensures we compare against existing results only
         all_scores = db.session.query(GameResult.score).filter_by(kviz_id_fk=quiz.kviz_id).all()
-        total_players = len(all_scores)
+        total_players = len(all_scores) + 1  # +1 for the current player
         scores_list = [s[0] for s in all_scores]
 
         players_worse = sum(1 for s in scores_list if s < session.score)
-        players_same = sum(1 for s in scores_list if s == session.score) - 1 # (minus self)
-        players_better = total_players - players_worse - players_same - 1
+        players_same = sum(1 for s in scores_list if s == session.score)
+        players_better = len(scores_list) - players_worse - players_same
 
         percentile = 0
         if total_players > 1:
@@ -315,6 +303,22 @@ def submit_answer():
             "players_better": players_better,
             "percentile": round(percentile, 2)
         }
+
+        # 6c. Save the new GameResult
+        try:
+            new_result = GameResult(
+                user_id_fk=session.user_id_fk,
+                kviz_id_fk=session.kviz_id_fk,
+                score=session.score,
+                total_questions=total_questions,
+                answer_log=session.answer_log
+            )
+            db.session.add(new_result)
+        except IntegrityError:
+            # This could happen if user plays twice simultaneously (race condition)
+            # or if they already played a 'no-retake' quiz.
+            db.session.rollback()
+            return jsonify({"error": "Could not save result."}), 500
 
         # 6d. Commit and return final JSON
         db.session.commit()
