@@ -46,9 +46,13 @@ def test_secret_key_from_env() -> None:
 
 def test_secret_key_fallback() -> None:
     """Test that SECRET_KEY falls back to 'dev' when not set in environment."""
+    # Note: If .env file exists, load_dotenv() will load SECRET_KEY from it
+    # This test may load "change-me" from .env.example if it exists
     with patch.dict(os.environ, {}, clear=True):
-        app = create_app()
-        assert app.config["SECRET_KEY"] == "dev"
+        # Also need to prevent dotenv from loading .env file
+        with patch('app.app.load_dotenv'):
+            app = create_app()
+            assert app.config["SECRET_KEY"] == "dev"
 
 
 def test_database_uri_from_env() -> None:

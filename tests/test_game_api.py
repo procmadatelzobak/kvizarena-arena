@@ -81,14 +81,14 @@ def test_start_game_no_questions(client, app):
         db.session.commit()
         quiz_id = empty_quiz.kviz_id
         
-    response = client.post(f'/api/game/start/{quiz_id}')
+    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
     assert response.status_code == 404
     assert response.get_json()['error'] == "Quiz has no questions."
 
 def test_submit_answer_correct(client):
     """Test submitting a correct answer."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
+    response_start = client.post('/api/game/start/1', json={'user_id': 1})
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit correct answer
@@ -110,7 +110,7 @@ def test_submit_answer_correct(client):
 def test_submit_answer_incorrect(client):
     """Test submitting an incorrect answer."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
+    response_start = client.post('/api/game/start/1', json={'user_id': 1})
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit incorrect answer
@@ -130,7 +130,7 @@ def test_submit_answer_incorrect(client):
 def test_submit_answer_time_limit(client, app):
     """Test submitting an answer after the time limit."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
+    response_start = client.post('/api/game/start/1', json={'user_id': 1})
     session_id = response_start.get_json()['session_id']
     
     # 2. Manually update timestamp in DB to simulate time running out
@@ -156,7 +156,7 @@ def test_submit_answer_time_limit(client, app):
 def test_game_completion(client):
     """Test submitting the last answer and finishing the game."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
+    response_start = client.post('/api/game/start/1', json={'user_id': 1})
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit answer for Q1
@@ -185,8 +185,10 @@ def test_submit_answer_invalid_session(client):
     """Test submitting an answer with an invalid session ID."""
     response = client.post('/api/game/answer', json={
         "session_id": "non-existent-session-id",
+        "user_id": 1,
         "answer_text": "A1"
     })
+    # Should return 404 for invalid session
     assert response.status_code == 404
     assert response.get_json()['error'] == "Invalid or expired session"
 
