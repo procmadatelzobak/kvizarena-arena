@@ -7,7 +7,9 @@ const gameState = {
     currentQuestionNumber: 0,
     totalQuestions: 0,
     quizName: '',
-    timeLimit: 0
+    timeLimit: 0,
+    userId: null,
+    nickname: null
 };
 
 // Timer state variables
@@ -31,8 +33,14 @@ function initialize() {
             });
     }
     
-    // Load the quiz list
-    fetchQuizzes();
+    // Set up login button listeners
+    document.getElementById('login-button').addEventListener('click', loginUser);
+    // Also allow pressing Enter to log in
+    document.getElementById('nickname-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loginUser();
+    });
+
+    showScreen('login');
 }
 
 // Start the timer loop with visual progress ring
@@ -95,6 +103,41 @@ function startTimerLoop(duration) {
     gameTimer = requestAnimationFrame(timerStep);
 }
 
+// Login user
+async function loginUser() {
+    const nickname = document.getElementById('nickname-input').value.trim();
+    const errorEl = document.getElementById('login-error');
+
+    if (!nickname) {
+        errorEl.textContent = 'Přezdívka nesmí být prázdná.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/game/user/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nickname: nickname })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            errorEl.textContent = data.error || 'Neznámá chyba';
+            errorEl.style.display = 'block';
+        } else {
+            gameState.userId = data.user_id;
+            gameState.nickname = data.nickname;
+            fetchQuizzes(); // Now fetch quizzes *after* login
+            showScreen('quiz-list');
+        }
+    } catch (err) {
+        errorEl.textContent = 'Chyba připojení k serveru.';
+        errorEl.style.display = 'block';
+    }
+}
+
 // Fetch all available quizzes
 async function fetchQuizzes() {
     try {
@@ -155,14 +198,23 @@ function renderQuizList(quizzes) {
 async function startGame(quizId) {
     try {
         const response = await fetch(`/api/game/start/${quizId}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user_id: gameState.userId })
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const data = await response.json();
+        
+        if (!response.ok) {
+            if (data.status === 'completed') {
+                alert(`Tento kvíz jste již dokončil(a). Vaše skóre: ${data.final_score}`);
+            } else if (data.status === 'scheduled') {
+                alert(`Tento kvíz ještě nezačal. Začíná za ${Math.round(data.starts_in_seconds / 60)} minut.`);
+            } else {
+                alert('Chyba při startu hry: ' + data.error);
+            }
+            return;
+        }
         
         // Save session data
         gameState.sessionId = data.session_id;
@@ -255,6 +307,7 @@ async function submitAnswer(answerText) {
             },
             body: JSON.stringify({
                 session_id: gameState.sessionId,
+                user_id: gameState.userId,
                 answer_text: answerText
             })
         });
@@ -326,45 +379,59 @@ function showFeedback(data) {
 
 // Render final results
 function renderResults(data) {
-    const container = document.getElementById('results-container');
-    container.innerHTML = '';
-    
-    const scoreDiv = document.createElement('div');
-    scoreDiv.className = 'final-score';
-    scoreDiv.textContent = `${data.final_score} / ${data.total_questions}`;
-    container.appendChild(scoreDiv);
-    
-    const label = document.createElement('div');
-    label.className = 'score-label';
-    const percentage = Math.round((data.final_score / data.total_questions) * 100);
-    label.textContent = `Úspěšnost: ${percentage}%`;
-    container.appendChild(label);
-    
-    // Add encouraging message
-    const message = document.createElement('p');
-    message.style.marginBottom = '30px';
-    message.style.fontSize = '1.1rem';
-    if (percentage >= 80) {
-        message.textContent = '🎉 Výborně! Máte skvělé znalosti!';
-    } else if (percentage >= 60) {
-        message.textContent = '👍 Dobrá práce! Můžete to ještě zlepšit.';
-    } else {
-        message.textContent = '💪 Zkuste to znovu, příště to určitě půjde lépe!';
-    }
-    container.appendChild(message);
-    
-    const playAgainButton = document.createElement('button');
-    playAgainButton.className = 'play-again-button';
-    playAgainButton.textContent = 'Hrát znovu';
-    playAgainButton.addEventListener('click', () => {
-        fetchQuizzes();
+    // Find containers
+    const rankingContainer = document.getElementById('results-ranking');
+    const summaryContainer = document.getElementById('results-summary-container');
+
+    // Clear old data
+    rankingContainer.innerHTML = '';
+    summaryContainer.innerHTML = '';
+
+    // 1. Render Ranking
+    const rank = data.ranking_summary;
+    rankingContainer.innerHTML = `
+        <h3>Váš výsledek: ${data.final_score} / ${data.total_questions}</h3>
+        <p>Byl(a) jste lepší než <strong>${rank.players_worse}</strong> hráčů.</p>
+        <p>Stejný výsledek mělo <strong>${rank.players_same}</strong> hráčů.</p>
+        <p>Horší výsledek mělo <strong>${rank.players_better}</strong> hráčů.</p>
+        <h4>Vaše percentilové umístění: ${rank.percentile}%</h4>
+        <hr>
+    `;
+
+    // 2. Render Detailed Summary
+    data.results_summary.forEach((log, index) => {
+        const resultEl = document.createElement('div');
+        resultEl.className = 'result-item-card';
+
+        let answerFeedback = '';
+        if (log.is_correct) {
+            answerFeedback = `<p class="correct">Odpověděl(a) jste: <strong>${log.your_answer}</strong> (Správně)</p>`;
+        } else if (log.your_answer === "") {
+             answerFeedback = `<p class="incorrect"><strong>Čas vypršel!</strong></p>
+                               <p>Správná odpověď: <strong>${log.correct_answer}</strong></p>`;
+        } else {
+            answerFeedback = `<p class="incorrect">Odpověděl(a) jste: <strong>${log.your_answer}</strong> (Špatně)</p>
+                              <p>Správná odpověď: <strong>${log.correct_answer}</strong></p>`;
+        }
+
+        resultEl.innerHTML = `
+            <h4>${index + 1}. ${log.question_text}</h4>
+            ${answerFeedback}
+            ${log.source_url ? `<a href="${log.source_url}" target="_blank">Zdroj / Více informací</a>` : ''}
+        `;
+        summaryContainer.appendChild(resultEl);
     });
-    container.appendChild(playAgainButton);
+
+    // Re-wire the 'Play Again' button
+    document.getElementById('play-again-button').onclick = () => {
+        fetchQuizzes();
+        showScreen('quiz-list');
+    };
 }
 
 // Show a specific screen and hide others
 function showScreen(screenName) {
-    const screens = ['quiz-list', 'game', 'results'];
+    const screens = ['login', 'quiz-list', 'game', 'results'];
     
     screens.forEach(name => {
         const screen = document.getElementById(`screen-${name}`);
