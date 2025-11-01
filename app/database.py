@@ -67,6 +67,9 @@ class Kviz(db.Model):
     )
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
 
+    # NEW COLUMN: Allow retakes
+    allow_retakes: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
+
     # Relationship to access questions via the association table
     otazky_v_kvizu = relationship(
         "KvizOtazky",
@@ -96,6 +99,44 @@ class KvizOtazky(db.Model):
 
 # --- Models for Game Logic (MVP) ---
 
+class User(db.Model):
+    """Model for a player (placeholder for OAuth)."""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nickname: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Relationship to their results
+    results = relationship("GameResult", back_populates="user")
+
+class GameResult(db.Model):
+    """Stores a persistent record of a completed quiz for stats."""
+    __tablename__ = "game_results"
+
+    __table_args__ = (
+        # A user can only have one final result per quiz (if retakes are on, it's overwritten)
+        UniqueConstraint('user_id_fk', 'kviz_id_fk', name='uq_user_kviz'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id_fk: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    kviz_id_fk: Mapped[int] = mapped_column(ForeignKey("kvizy.kviz_id"))
+
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    total_questions: Mapped[int] = mapped_column(Integer, nullable=False)
+    finished_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Stores the detailed log from the session for per-question stats
+    answer_log: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+
+    user: Mapped["User"] = relationship("User", back_populates="results")
+    kviz: Mapped["Kviz"] = relationship("Kviz")
+
 class GameSession(db.Model):
     """
     Model for a single active game (a game session).
@@ -107,6 +148,10 @@ class GameSession(db.Model):
         String(255), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     kviz_id_fk: Mapped[int] = mapped_column(ForeignKey("kvizy.kviz_id"))
+
+    # NEW COLUMN to link session to a user
+    user_id_fk: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
     score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     current_question_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_question_timestamp: Mapped[int] = mapped_column(
@@ -119,6 +164,7 @@ class GameSession(db.Model):
 
     # Relationship for easy access to quiz info
     kviz: Mapped["Kviz"] = relationship("Kviz")
+    user: Mapped["User"] = relationship("User")
 
 def init_app(app: Flask) -> None:
     """

@@ -10,8 +10,19 @@
 </head>
 <body>
     <div id="app">
+        <!-- Screen 0: Login -->
+        <div id="screen-login">
+            <h2>Vítejte v KvízAréně!</h2>
+            <p>Zadejte prosím přezdívku:</p>
+            <div class="form-group">
+                <input type="text" id="nickname-input" placeholder="Např. Franta123">
+            </div>
+            <button id="login-button">Vstoupit</button>
+            <p id="login-error" class="error-message" style="display:none;"></p>
+        </div>
+
         <!-- Screen 1: Quiz List -->
-        <div id="screen-quiz-list">
+        <div id="screen-quiz-list" class="hidden">
             <h2>Načítám kvízy...</h2>
         </div>
 
@@ -39,8 +50,10 @@
 
         <!-- Screen 3: Results (Initially Hidden) -->
         <div id="screen-results" class="hidden">
-            <h2>Výsledky</h2>
-            <div id="results-container"></div>
+            <h2>Kvíz dokončen!</h2>
+            <div id="results-ranking"></div>
+            <div id="results-summary-container"></div>
+            <button id="play-again-button">Zpět na výběr</button>
         </div>
     </div>
 

@@ -26,6 +26,7 @@
 </head>
 <body>
     <div class="container">
+        <a href="/" style="font-size: 1.2em; margin-bottom: 15px; display: block;">&larr; Back to Main Site</a>
         <h1>Admin Arény: Správce kvízů</h1>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -38,78 +39,46 @@
           {% endif %}
         {% endwith %}
 
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div class="card" style="flex: 1;">
-                <h2>Vytvořit nový kvíz</h2>
-                <form action="{{ url_for('admin.kvizy_route') }}" method="POST">
-                    <div class="form-group">
-                        <label for="quiz_name">Název kvízu:</label>
-                        <input type="text" id="quiz_name" name="quiz_name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="quiz_description">Popis (volitelný):</label>
-                        <textarea id="quiz_description" name="quiz_description" rows="2"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="time_limit">Čas na otázku (sekundy):</label>
-                        <input type="number" id="time_limit" name="time_limit" value="15" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="quiz_mode">Režim kvízu:</label>
-                        <select id="quiz_mode" name="quiz_mode" onchange="toggleStartTime(this.value, 'start_time_wrapper')">
-                            <option value="on_demand" selected>On-demand (kdykoli)</option>
-                            <option value="scheduled">Scheduled (plánovaný)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="start_time_wrapper" style="display: none;">
-                        <label for="start_time">Čas spuštění:</label>
-                        <input type="datetime-local" id="start_time" name="start_time">
-                    </div>
-                    <div class="form-group">
-                        <input type="checkbox" id="is_active" name="is_active" value="on" checked>
-                        <label for="is_active">Aktivní (viditelný pro hráče)</label>
-                    </div>
-                    <button type="submit">Vytvořit kvíz</button>
-                </form>
-            </div>
-
-            <div class="card" style="flex: 1;">
-                <h2>Importovat kvíz z CSV</h2>
-                <form action="{{ url_for('admin.import_quiz_csv') }}" method="POST" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="import_quiz_name">Název nového kvízu:</label>
-                        <input type="text" id="import_quiz_name" name="quiz_name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="import_quiz_description">Popis (volitelný):</label>
-                        <textarea id="import_quiz_description" name="quiz_description" rows="1"></textarea>
-                    </div>
-                     <div class="form-group">
-                        <label for="import_time_limit">Čas na otázku (sekundy):</label>
-                        <input type="number" id="import_time_limit" name="time_limit" value="15" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="import_quiz_mode">Režim kvízu:</label>
-                        <select id="import_quiz_mode" name="quiz_mode" onchange="toggleStartTime(this.value, 'import_start_time_wrapper')">
-                            <option value="on_demand" selected>On-demand (kdykoli)</option>
-                            <option value="scheduled">Scheduled (plánovaný)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="import_start_time_wrapper" style="display: none;">
-                        <label for="import_start_time">Čas spuštění:</label>
-                        <input type="datetime-local" id="import_start_time" name="start_time">
-                    </div>
-                    <div class="form-group">
-                        <input type="checkbox" id="import_is_active" name="is_active" value="on" checked>
-                        <label for="import_is_active">Aktivní (viditelný pro hráče)</label>
-                    </div>
-                    <div class="form-group">
-                        <label for="csv_file">Vyberte CSV soubor (z Vševěda):</label>
-                        <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
-                    </div>
-                    <button type="submit">Importovat kvíz</button>
-                </form>
-            </div>
+        <div class="card">
+            <h2>Importovat kvíz z CSV</h2>
+            <form action="{{ url_for('admin.import_quiz_csv') }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="import_quiz_name">Název nového kvízu:</label>
+                    <input type="text" id="import_quiz_name" name="quiz_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="import_quiz_description">Popis (volitelný):</label>
+                    <textarea id="import_quiz_description" name="quiz_description" rows="1"></textarea>
+                </div>
+                 <div class="form-group">
+                    <label for="import_time_limit">Čas na otázku (sekundy):</label>
+                    <input type="number" id="import_time_limit" name="time_limit" value="15" required>
+                </div>
+                <div class="form-group">
+                    <label for="import_quiz_mode">Režim kvízu:</label>
+                    <select id="import_quiz_mode" name="quiz_mode" onchange="toggleStartTime(this.value, 'import_start_time_wrapper')">
+                        <option value="on_demand" selected>On-demand (kdykoli)</option>
+                        <option value="scheduled">Scheduled (plánovaný)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="import_start_time_wrapper" style="display: none;">
+                    <label for="import_start_time">Čas spuštění:</label>
+                    <input type="datetime-local" id="import_start_time" name="start_time">
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" id="import_is_active" name="is_active" value="on" checked>
+                    <label for="import_is_active">Aktivní (viditelný pro hráče)</label>
+                </div>
+                <div class="form-group">
+                    <input type="checkbox" id="import_allow_retakes" name="allow_retakes" value="on" checked>
+                    <label for="import_allow_retakes">Povolit opakování kvízu (pokud není zaškrtnuto, uživatelé mohou hrát pouze jednou)</label>
+                </div>
+                <div class="form-group">
+                    <label for="csv_file">Vyberte CSV soubor (z Vševěda):</label>
+                    <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                </div>
+                <button type="submit">Importovat kvíz</button>
+            </form>
         </div>
 
         <div class="card">
@@ -137,7 +106,8 @@
                         <td>{{ 'Plánovaný' if item.kviz.quiz_mode == 'scheduled' else 'On-demand' }}</td>
                         <td>{{ item.kviz.start_time.strftime('%Y-%m-%d %H:%M') if item.kviz.start_time else 'N/A' }}</td>
                         <td>
-                            <form action="{{ url_for('admin.delete_quiz_route', kviz_id=item.kviz.kviz_id) }}" method="POST" onsubmit="return confirm('Opravdu chcete smazat kvíz \'{{ item.kviz.nazev }}\'?');">
+                            <a href="{{ url_for('admin.quiz_stats', kviz_id=item.kviz.kviz_id) }}" class="button" style="background-color: #17a2b8;">Stats</a>
+                            <form action="{{ url_for('admin.delete_quiz_route', kviz_id=item.kviz.kviz_id) }}" method="POST" onsubmit="return confirm('Opravdu chcete smazat kvíz \'{{ item.kviz.nazev }}\'?');" style="display: inline;">
                                 <button type="submit" class="delete-button">Smazat</button>
                             </form>
                             </td>

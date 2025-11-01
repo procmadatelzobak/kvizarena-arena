@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Statistiky: {{ quiz.nazev }}</title>
+    <style>
+        /* (Copy basic styles from kvizy.html) */
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f4; }
+        .container { max-width: 1200px; margin: auto; }
+        .card { background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 20px; margin-bottom: 20px; }
+        .question-stat { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .answer-bar { display: flex; align-items: center; margin: 5px 0; }
+        .answer-text { min-width: 150px; }
+        .bar { height: 18px; background: #007bff; color: white; padding: 2px 5px; min-width: 20px; text-align: right; }
+        .bar.correct { background: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('admin.kvizy_route') }}">&larr; Zpět na seznam kvízů</a>
+        <h1>Statistiky: {{ quiz.nazev }}</h1>
+
+        <div class="card">
+            <h2>Celkový přehled</h2>
+            <p><strong>Celkem dohrání:</strong> {{ total_plays }}</p>
+            <p><strong>Průměrné skóre:</strong> {{ "%.2f"|format(avg_score or 0) }}</p>
+        </div>
+
+        <div class="card">
+            <h2>Statistiky otázek</h2>
+            {% for stat in question_stats %}
+            <div class="question-stat">
+                <h4>{{ loop.index }}. {{ stat.text }}</h4>
+                {% for answer_text, count in stat.answers.items() %}
+                <div class="answer-bar">
+                    <span class="answer-text">
+                        {{ answer_text }}
+                        {% if answer_text == stat.correct %}<strong>(Správně)</strong>{% endif %}
+                    </span>
+                    <div class="bar {% if answer_text == stat.correct %}correct{% endif %}" style="width: {{ (count / total_plays * 100) if total_plays > 0 else 0 }}%;">
+                        {{ count }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>Zatím žádná data.</p>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

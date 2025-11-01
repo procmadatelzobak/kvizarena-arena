@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy import inspect
 from app import create_app
-from app.database import db, Otazka, Kviz, KvizOtazky, GameSession
+from app.database import db, Otazka, Kviz, KvizOtazky, GameSession, User
 
 
 @pytest.fixture
@@ -128,7 +128,12 @@ def test_quiz_questions_association(app):
 def test_game_session_creation(app):
     """Test creating a game session."""
     with app.app_context():
-        # Create a quiz first
+        # Create a user first
+        user = User(nickname="test_user")
+        db.session.add(user)
+        db.session.flush()
+        
+        # Create a quiz
         quiz = Kviz(nazev="Session Test Quiz", popis="For testing sessions")
         db.session.add(quiz)
         db.session.flush()
@@ -137,6 +142,7 @@ def test_game_session_creation(app):
         session = GameSession(
             session_id="test-session-123",
             kviz_id_fk=quiz.kviz_id,
+            user_id_fk=user.id,
             score=0,
             current_question_index=0
         )
