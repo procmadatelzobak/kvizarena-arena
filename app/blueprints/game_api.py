@@ -200,7 +200,7 @@ def submit_answer():
     new_log.append(log_entry)
     session.answer_log = new_log
 
-    # 5. Prepare for the *next* question
+    # 6. Prepare for the *next* question
     session.current_question_index += 1
     session.last_question_timestamp = int(time.time())
 
@@ -212,7 +212,7 @@ def submit_answer():
     
     total_questions = _get_total_questions(quiz.kviz_id)
 
-    # 6. Check if quiz is finished
+    # 7. Check if quiz is finished
     if not next_question_assoc:
         session.is_active = False
         db.session.commit()
@@ -229,7 +229,7 @@ def submit_answer():
             "results_summary": session.answer_log
         })
     
-    # 7. Send next question
+    # 8. Send next question
     db.session.commit()
     next_question = next_question_assoc.otazka
     

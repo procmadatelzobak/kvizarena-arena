@@ -8,6 +8,7 @@ for the application.
 from __future__ import annotations
 import uuid
 import time
+from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
@@ -61,7 +62,7 @@ class Kviz(db.Model):
     quiz_mode: Mapped[str] = mapped_column(
         String(50), nullable=False, default="on_demand"  # 'on_demand' or 'scheduled'
     )
-    start_time: Mapped[DateTime] = mapped_column(
+    start_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=True, server_default=None
     )
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
