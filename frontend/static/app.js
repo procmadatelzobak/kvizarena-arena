@@ -189,13 +189,14 @@ async function startGame(quizId) {
         const data = await response.json();
         
         if (!response.ok) {
-            if (data.status === 'completed') {
+            // Check for authentication error first
+            if (response.status === 401) {
+                alert('Nejste přihlášen(a). Prosím, přihlaste se.');
+                window.location.href = '/api/auth/login/google';
+            } else if (data.status === 'completed') {
                 alert(`Tento kvíz jste již dokončil(a). Vaše skóre: ${data.final_score}`);
             } else if (data.status === 'scheduled') {
                 alert(`Tento kvíz ještě nezačal. Začíná za ${Math.round(data.starts_in_seconds / 60)} minut.`);
-            } else if (response.status === 401) {
-                alert('Nejste přihlášen(a). Prosím, přihlaste se.');
-                window.location.href = '/api/auth/login/google';
             } else {
                 alert('Chyba při startu hry: ' + data.error);
             }

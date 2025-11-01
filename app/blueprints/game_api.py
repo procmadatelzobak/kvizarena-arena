@@ -186,6 +186,12 @@ def submit_answer():
     Submits an answer for a question in an active session.
     All logic is handled server-side for security.
     """
+    # 1. Authentication check FIRST to prevent information leakage
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    # 2. Parse request data
     data = request.get_json()
     session_id = data.get('session_id')
     answer_text = data.get('answer_text') # We expect the text of the answer
@@ -193,11 +199,7 @@ def submit_answer():
     if not session_id or answer_text is None:
         return jsonify({"error": "Missing session_id or answer_text"}), 400
 
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({"error": "Not authenticated"}), 401
-
-    # 1. Find the active session
+    # 3. Find the active session
     game_session = GameSession.query.filter_by(
         session_id=session_id,
         is_active=True
@@ -210,7 +212,7 @@ def submit_answer():
     if game_session.user_id_fk != user_id:
         return jsonify({"error": "Session mismatch"}), 403 # Forbidden
 
-    # 2. Get the *current* question from the session
+    # 4. Get the *current* question from the session
     question_assoc = _get_current_question(game_session)
     if not question_assoc:
         # This should not happen, but good to check

@@ -4,9 +4,13 @@ Authentication Blueprint for KvízAréna.
 Handles Google OAuth2 authentication flow.
 """
 import os
+import logging
 from flask import Blueprint, url_for, redirect, session
 from authlib.integrations.flask_client import OAuth
+from authlib.common.errors import AuthlibBaseError
 from app.database import db, User
+
+logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -26,9 +30,12 @@ def callback_google():
     try:
         token = oauth.google.authorize_access_token()
         user_info = oauth.google.parse_id_token(token)
+    except AuthlibBaseError as e:
+        logger.error(f"OAuth error during callback: {type(e).__name__}")
+        return redirect('/?error=auth_failed')
     except Exception as e:
-        print(f"Error during OAuth callback: {e}")
-        return redirect('/?error=auth_failed') # Redirect to frontend with error
+        logger.error(f"Unexpected error during OAuth callback: {type(e).__name__}")
+        return redirect('/?error=auth_failed')
 
     # Find or create user in database
     google_id = user_info.get('sub')
