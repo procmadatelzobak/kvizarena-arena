@@ -46,10 +46,7 @@ def test_secret_key_from_env() -> None:
 
 def test_secret_key_fallback() -> None:
     """Test that SECRET_KEY falls back to 'dev' when not set in environment."""
-    # Clear SECRET_KEY from environment if present
-    with patch.dict(os.environ, {}, clear=False):
-        if "SECRET_KEY" in os.environ:
-            del os.environ["SECRET_KEY"]
+    with patch.dict(os.environ, {}, clear=True):
         app = create_app()
         assert app.config["SECRET_KEY"] == "dev"
 
@@ -63,9 +60,7 @@ def test_database_uri_from_env() -> None:
 
 def test_database_uri_fallback() -> None:
     """Test that DATABASE_URL falls back to sqlite when not set."""
-    with patch.dict(os.environ, {}, clear=False):
-        if "DATABASE_URL" in os.environ:
-            del os.environ["DATABASE_URL"]
+    with patch.dict(os.environ, {}, clear=True):
         app = create_app()
         assert app.config["SQLALCHEMY_DATABASE_URI"] == "sqlite:///kvizarena.db"
 
