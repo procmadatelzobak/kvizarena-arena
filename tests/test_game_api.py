@@ -176,3 +176,31 @@ def test_submit_answer_invalid_session(client):
     })
     assert response.status_code == 404
     assert response.get_json()['error'] == "Invalid or expired session"
+
+def test_get_quizzes(client, app):
+    """Test getting all available quizzes."""
+    response = client.get('/api/game/quizzes')
+    assert response.status_code == 200
+    
+    json_data = response.get_json()
+    assert isinstance(json_data, list)
+    assert len(json_data) == 1  # We have one quiz in the test fixture
+    
+    quiz = json_data[0]
+    assert quiz['id'] == 1
+    assert quiz['nazev'] == "API Test Quiz"
+    assert quiz['popis'] is None
+    assert quiz['pocet_otazek'] == 2
+
+def test_get_quizzes_empty(client, app):
+    """Test getting quizzes when none exist."""
+    # Remove the test quiz
+    with app.app_context():
+        db.session.query(KvizOtazky).delete()
+        db.session.query(Kviz).delete()
+        db.session.commit()
+    
+    response = client.get('/api/game/quizzes')
+    assert response.status_code == 200
+    assert response.get_json() == []
+

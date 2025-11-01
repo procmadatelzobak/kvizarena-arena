@@ -15,8 +15,16 @@ from .blueprints import register_blueprints
 def create_app(config: dict[str, Any] | None = None) -> Flask:
     """Create and configure the Flask application instance."""
     load_dotenv()
+    
+    # Calculate absolute paths for frontend directories
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(app_dir)
+    frontend_dir = os.path.join(project_root, 'frontend')
+    frontend_static_dir = os.path.join(frontend_dir, 'static')
 
-    app = Flask(__name__, instance_relative_config=False)
+    app = Flask(__name__, instance_relative_config=False, 
+                template_folder=frontend_dir, 
+                static_folder=frontend_static_dir)
 
     app.config.setdefault("SECRET_KEY", os.getenv("SECRET_KEY", "dev"))
     app.config.setdefault(

@@ -6,8 +6,9 @@ for the main Flask application.
 """
 
 from __future__ import annotations
+import os
 
-from flask import Blueprint, Flask, jsonify, redirect, url_for
+from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template, send_from_directory
 
 # Import new blueprints here
 from .admin import admin_bp
@@ -43,10 +44,23 @@ def create_health_blueprint() -> Blueprint:
 def create_main_blueprint() -> Blueprint:
     """Creates the main blueprint for homepage redirect."""
     blueprint = Blueprint("main", __name__)
+    
+    # Get the absolute path to the frontend directory
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
 
     @blueprint.get("/")
     def index():
-        # Redirect the root URL to the admin quiz page
-        return redirect(url_for('admin.kvizy_route'))
+        # Serve the main frontend application
+        return render_template('index.html')
+    
+    @blueprint.get("/manifest.json")
+    def manifest():
+        # Serve the PWA manifest
+        return send_from_directory(frontend_dir, 'manifest.json')
+    
+    @blueprint.get("/sw.js")
+    def service_worker():
+        # Serve the service worker
+        return send_from_directory(frontend_dir, 'sw.js')
 
     return blueprint
