@@ -5,7 +5,7 @@ import pytest
 import time
 from datetime import datetime, timezone, timedelta
 from app import create_app
-from app.database import db, Otazka, Kviz, KvizOtazky, GameSession
+from app.database import db, Otazka, Kviz, KvizOtazky, GameSession, User
 
 @pytest.fixture
 def app():
@@ -19,6 +19,10 @@ def app():
     
     with app.app_context():
         db.create_all()
+        # Create a test user for all tests
+        test_user = User(nickname="test_player")
+        db.session.add(test_user)
+        db.session.commit()
         yield app
         db.drop_all()
 
@@ -78,6 +82,7 @@ def test_answer_log_in_session(client, app):
     # Submit first answer
     client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "A1"  # Correct
     })
     
@@ -103,12 +108,14 @@ def test_results_summary_returned(client, app):
     # Submit first answer (correct)
     client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "A1"
     })
     
     # Submit second answer (incorrect) - last question
     response_final = client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "Wrong"
     })
     

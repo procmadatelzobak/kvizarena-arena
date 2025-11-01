@@ -1,7 +1,10 @@
 """Tests for admin blueprint functionality."""
 
 import io
+import os
 import pytest
+from base64 import b64encode
+from unittest.mock import patch
 from app import create_app
 from app.database import db, Otazka, Kviz, KvizOtazky
 
@@ -9,17 +12,19 @@ from app.database import db, Otazka, Kviz, KvizOtazky
 @pytest.fixture
 def app():
     """Create and configure a test app instance."""
-    app = create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "WTF_CSRF_ENABLED": False,  # Disable CSRF for testing
-        "SECRET_KEY": "test-secret-key"  # Required for sessions and flash messages
-    })
-    
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.drop_all()
+    # Set environment variables for auth
+    with patch.dict(os.environ, {"ADMIN_USERNAME": "admin", "ADMIN_PASSWORD": "test123"}):
+        app = create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "WTF_CSRF_ENABLED": False,  # Disable CSRF for testing
+            "SECRET_KEY": "test-secret-key"  # Required for sessions and flash messages
+        })
+        
+        with app.app_context():
+            db.create_all()
+            yield app
+            db.drop_all()
 
 
 @pytest.fixture
@@ -28,12 +33,19 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture
+def auth_headers():
+    """Return headers with HTTP Basic Auth."""
+    credentials = b64encode(b"admin:test123").decode('utf-8')
+    return {'Authorization': f'Basic {credentials}'}
+
+
 def test_admin_blueprint_registered(app):
     """Test that admin blueprint is registered."""
     assert "admin" in app.blueprints
 
 
-def test_kvizy_route_get(client, app):
+def test_kvizy_route_get(client, auth_headers, app):
     """Test GET request to /admin/kvizy route."""
     with app.app_context():
         # Create a sample quiz
@@ -41,14 +53,14 @@ def test_kvizy_route_get(client, app):
         db.session.add(quiz)
         db.session.commit()
     
-    response = client.get('/admin/kvizy')
+    response = client.get('/admin/kvizy', headers=auth_headers)
     assert response.status_code == 200
     # Note: This will fail if template is missing, but that's expected for now
 
 
-def test_kvizy_route_post_create_quiz(client, app):
-    """Test POST request to /admin/kvizy to create a new quiz."""
-    response = client.post('/admin/kvizy', data={
+def test_kvizy_route_post_create_quiz(client, auth_headers, app):
+    """Test POST request to /admin/kvizy to create a new quiz (endpoint removed)."""
+    response = client.post('/admin/kvizy', headers=auth_headers, data={
         'quiz_name': 'New Test Quiz',
         'quiz_description': 'A new quiz for testing',
         'time_limit': 30
@@ -56,14 +68,13 @@ def test_kvizy_route_post_create_quiz(client, app):
     
     with app.app_context():
         quiz = Kviz.query.filter_by(nazev='New Test Quiz').first()
-        assert quiz is not None
-        assert quiz.popis == 'A new quiz for testing'
-        assert quiz.time_limit_per_question == 30
+        # Quiz should NOT be created because POST endpoint is removed
+        assert quiz is None
 
 
-def test_kvizy_route_post_empty_name(client, app):
+def test_kvizy_route_post_empty_name(client, auth_headers, app):
     """Test POST with empty quiz name returns error."""
-    response = client.post('/admin/kvizy', data={
+    response = client.post('/admin/kvizy', headers=auth_headers, data={
         'quiz_name': '',
         'quiz_description': 'Description',
         'time_limit': 15
@@ -75,7 +86,7 @@ def test_kvizy_route_post_empty_name(client, app):
         assert count == 0
 
 
-def test_kvizy_route_post_duplicate_name(client, app):
+def test_kvizy_route_post_duplicate_name(client, auth_headers, app):
     """Test POST with duplicate quiz name returns error."""
     with app.app_context():
         # Create initial quiz
@@ -84,7 +95,7 @@ def test_kvizy_route_post_duplicate_name(client, app):
         db.session.commit()
     
     # Try to create another quiz with same name
-    response = client.post('/admin/kvizy', data={
+    response = client.post('/admin/kvizy', headers=auth_headers, data={
         'quiz_name': 'Duplicate Quiz',
         'quiz_description': 'Second',
         'time_limit': 15
@@ -96,7 +107,7 @@ def test_kvizy_route_post_duplicate_name(client, app):
         assert count == 1
 
 
-def test_delete_quiz_route(client, app):
+def test_delete_quiz_route(client, auth_headers, app):
     """Test POST request to /admin/kviz/delete/<id>."""
     with app.app_context():
         # Create a quiz to delete
@@ -106,7 +117,7 @@ def test_delete_quiz_route(client, app):
         quiz_id = quiz.kviz_id
     
     # Delete the quiz
-    response = client.post(f'/admin/kviz/delete/{quiz_id}', follow_redirects=True)
+    response = client.post(f'/admin/kviz/delete/{quiz_id}', headers=auth_headers, follow_redirects=True)
     assert response.status_code == 200
     
     with app.app_context():
@@ -115,7 +126,7 @@ def test_delete_quiz_route(client, app):
         assert deleted_quiz is None
 
 
-def test_delete_quiz_with_questions(client, app):
+def test_delete_quiz_with_questions(client, auth_headers, app):
     """Test deleting a quiz also deletes its question associations."""
     with app.app_context():
         # Create quiz and question
@@ -138,7 +149,7 @@ def test_delete_quiz_with_questions(client, app):
         quiz_id = quiz.kviz_id
     
     # Delete the quiz
-    response = client.post(f'/admin/kviz/delete/{quiz_id}', follow_redirects=True)
+    response = client.post(f'/admin/kviz/delete/{quiz_id}', headers=auth_headers, follow_redirects=True)
     
     with app.app_context():
         # Verify quiz was deleted
@@ -147,7 +158,7 @@ def test_delete_quiz_with_questions(client, app):
         assert db.session.query(KvizOtazky).filter_by(kviz_id_fk=quiz_id).count() == 0
 
 
-def test_import_csv_basic(client, app):
+def test_import_csv_basic(client, auth_headers, app):
     """Test basic CSV import functionality."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3,tema,obtiznost
 What is 2+2?,4,3,5,6,Math,1
@@ -160,7 +171,7 @@ What is the capital of France?,Paris,London,Berlin,Madrid,Geography,2"""
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'test.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     assert response.status_code == 200
     
     with app.app_context():
@@ -184,7 +195,7 @@ What is the capital of France?,Paris,London,Berlin,Madrid,Geography,2"""
         assert q1.obtiznost == 1
 
 
-def test_import_csv_utf8_sig(client, app):
+def test_import_csv_utf8_sig(client, auth_headers, app):
     """Test CSV import with UTF-8-SIG encoding (BOM)."""
     # Create CSV with BOM
     csv_content = "\ufeffotazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3\nTest question?,Answer,Wrong1,Wrong2,Wrong3"
@@ -196,7 +207,7 @@ def test_import_csv_utf8_sig(client, app):
         'csv_file': (io.BytesIO(csv_content.encode('utf-8-sig')), 'test_bom.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     assert response.status_code == 200
     
     with app.app_context():
@@ -204,7 +215,7 @@ def test_import_csv_utf8_sig(client, app):
         assert quiz is not None
 
 
-def test_import_csv_existing_question(client, app):
+def test_import_csv_existing_question(client, auth_headers, app):
     """Test CSV import with questions that already exist in database."""
     with app.app_context():
         # Create existing question
@@ -230,7 +241,7 @@ New question?,New answer,Wrong1,Wrong2,Wrong3"""
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'mixed.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     
     with app.app_context():
         quiz = Kviz.query.filter_by(nazev='Mixed Quiz').first()
@@ -248,7 +259,7 @@ New question?,New answer,Wrong1,Wrong2,Wrong3"""
         assert count == 1
 
 
-def test_import_csv_no_file(client, app):
+def test_import_csv_no_file(client, auth_headers, app):
     """Test CSV import without file returns error."""
     data = {
         'quiz_name': 'No File Quiz',
@@ -256,7 +267,7 @@ def test_import_csv_no_file(client, app):
         'time_limit': 15
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     assert response.status_code == 200
     
     with app.app_context():
@@ -265,7 +276,7 @@ def test_import_csv_no_file(client, app):
         assert quiz is None
 
 
-def test_import_csv_empty_name(client, app):
+def test_import_csv_empty_name(client, auth_headers, app):
     """Test CSV import without quiz name returns error."""
     csv_content = "otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3\nQ?,A,B,C,D"
     
@@ -276,7 +287,7 @@ def test_import_csv_empty_name(client, app):
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'test.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     
     with app.app_context():
         # Verify no quiz was created
@@ -284,7 +295,7 @@ def test_import_csv_empty_name(client, app):
         assert count == 0
 
 
-def test_import_csv_duplicate_quiz_name(client, app):
+def test_import_csv_duplicate_quiz_name(client, auth_headers, app):
     """Test CSV import with duplicate quiz name returns error."""
     with app.app_context():
         # Create existing quiz
@@ -301,7 +312,7 @@ def test_import_csv_duplicate_quiz_name(client, app):
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'test.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     
     with app.app_context():
         # Verify only one quiz with that name exists
@@ -309,7 +320,7 @@ def test_import_csv_duplicate_quiz_name(client, app):
         assert count == 1
 
 
-def test_import_csv_wrong_file_type(client, app):
+def test_import_csv_wrong_file_type(client, auth_headers, app):
     """Test CSV import with non-CSV file returns error."""
     data = {
         'quiz_name': 'Wrong Type Quiz',
@@ -318,7 +329,7 @@ def test_import_csv_wrong_file_type(client, app):
         'csv_file': (io.BytesIO(b'Not a CSV'), 'test.txt')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     
     with app.app_context():
         # Verify no quiz was created
@@ -326,7 +337,7 @@ def test_import_csv_wrong_file_type(client, app):
         assert quiz is None
 
 
-def test_import_csv_preserves_order(client, app):
+def test_import_csv_preserves_order(client, auth_headers, app):
     """Test that CSV import preserves question order."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
 First question?,1,2,3,4
@@ -340,7 +351,7 @@ Third question?,3,4,5,6"""
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'ordered.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     
     with app.app_context():
         quiz = Kviz.query.filter_by(nazev='Ordered Quiz').first()
@@ -361,7 +372,7 @@ Third question?,3,4,5,6"""
         assert q3.otazka == 'Third question?'
 
 
-def test_import_csv_skips_invalid_rows(client, app):
+def test_import_csv_skips_invalid_rows(client, auth_headers, app):
     """Test that CSV import skips rows with missing data."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
 Valid question?,Answer,Wrong1,Wrong2,Wrong3
@@ -375,7 +386,7 @@ Another valid?,Answer2,Wrong1,Wrong2,Wrong3"""
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'partial.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     
     with app.app_context():
         quiz = Kviz.query.filter_by(nazev='Partial Quiz').first()
@@ -386,7 +397,7 @@ Another valid?,Answer2,Wrong1,Wrong2,Wrong3"""
         assert questions == 2
 
 
-def test_import_csv_duplicate_questions_in_csv(client, app):
+def test_import_csv_duplicate_questions_in_csv(client, auth_headers, app):
     """Test that CSV import skips duplicate questions within the same CSV file."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
 What is 2+2?,4,3,5,6
@@ -402,7 +413,7 @@ What is 3+3?,6,5,7,8"""
         'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'duplicates.csv')
     }
     
-    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    response = client.post('/admin/kviz/import', headers=auth_headers, content_type='multipart/form-data', data=data, follow_redirects=True)
     assert response.status_code == 200
     
     with app.app_context():

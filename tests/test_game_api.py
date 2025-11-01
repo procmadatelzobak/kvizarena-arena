@@ -4,7 +4,7 @@ Tests for the Game API blueprint.
 import pytest
 import time
 from app import create_app
-from app.database import db, Otazka, Kviz, KvizOtazky, GameSession
+from app.database import db, Otazka, Kviz, KvizOtazky, GameSession, User
 
 @pytest.fixture
 def app():
@@ -18,6 +18,12 @@ def app():
     
     with app.app_context():
         db.create_all()
+        
+        # Create a test user
+        test_user = User(nickname="test_player")
+        db.session.add(test_user)
+        db.session.commit()
+        
         # Create a test quiz and questions
         quiz = Kviz(nazev="API Test Quiz", time_limit_per_question=10)
         q1 = Otazka(
@@ -53,7 +59,9 @@ def client(app):
 
 def test_start_game(client):
     """Test starting a new game."""
-    response = client.post('/api/game/start/1')
+    response = client.post('/api/game/start/1', 
+                          json={'user_id': 1},
+                          headers={'Content-Type': 'application/json'})
     assert response.status_code == 201
     
     json_data = response.get_json()
@@ -80,12 +88,13 @@ def test_start_game_no_questions(client, app):
 def test_submit_answer_correct(client):
     """Test submitting a correct answer."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1')
+    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit correct answer
     response_answer = client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "A1"
     })
     
@@ -101,12 +110,13 @@ def test_submit_answer_correct(client):
 def test_submit_answer_incorrect(client):
     """Test submitting an incorrect answer."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1')
+    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit incorrect answer
     response_answer = client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "Wrong Answer"
     })
     
@@ -120,7 +130,7 @@ def test_submit_answer_incorrect(client):
 def test_submit_answer_time_limit(client, app):
     """Test submitting an answer after the time limit."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1')
+    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
     session_id = response_start.get_json()['session_id']
     
     # 2. Manually update timestamp in DB to simulate time running out
@@ -132,6 +142,7 @@ def test_submit_answer_time_limit(client, app):
     # 3. Submit answer (even if correct, it's too late)
     response_answer = client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "A1"
     })
     
@@ -145,18 +156,20 @@ def test_submit_answer_time_limit(client, app):
 def test_game_completion(client):
     """Test submitting the last answer and finishing the game."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1')
+    response_start = client.post('/api/game/start/1', json={'user_id': 1}, headers={'Content-Type': 'application/json'})
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit answer for Q1
     client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "A1" # Correct
     })
     
     # 3. Submit answer for Q2 (last question)
     response_final = client.post('/api/game/answer', json={
         "session_id": session_id,
+        "user_id": 1,
         "answer_text": "Wrong Answer" # Incorrect
     })
     
