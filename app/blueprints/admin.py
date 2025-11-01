@@ -14,6 +14,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from app.database import db, Otazka, Kviz, KvizOtazky
+from app.auth import admin_required
 
 # Create the Blueprint
 admin_bp = Blueprint(
@@ -22,6 +23,12 @@ admin_bp = Blueprint(
     url_prefix='/admin',  # All routes in this blueprint will start with /admin
     template_folder='../templates/admin' # Templates will be in app/templates/admin/
 )
+
+@admin_bp.before_request
+@admin_required
+def before_request():
+    """Protect all admin routes."""
+    pass
 
 @admin_bp.route('/kvizy', methods=['GET', 'POST'])
 def kvizy_route():
