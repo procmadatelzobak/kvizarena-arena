@@ -158,6 +158,7 @@ def import_quiz_csv():
         required_columns = ['otazka', 'spravna_odpoved', 'spatna_odpoved1', 'spatna_odpoved2', 'spatna_odpoved3']
         
         questions_to_link = []
+        question_ids_in_this_quiz = set()
 
         for row in csv_reader:
             if not all(col in row and row[col] for col in required_columns):
@@ -186,7 +187,13 @@ def import_quiz_csv():
                 db.session.commit() # Commit to get the ID
                 question_id = new_question.id
             
-            questions_to_link.append(question_id)
+            # Check if we have already added this question to this specific quiz
+            if question_id not in question_ids_in_this_quiz:
+                questions_to_link.append(question_id)
+                question_ids_in_this_quiz.add(question_id)
+            else:
+                # We've already seen this question in this CSV, skip it
+                logging.warning(f"Skipping duplicate question in CSV: {otazka_text}")
 
         # 4. Link all questions to the quiz with correct ordering
         for index, q_id in enumerate(questions_to_link):
