@@ -1,5 +1,8 @@
 """Smoke tests for the Kvizarena Flask application."""
 
+import os
+from unittest.mock import patch
+
 from app import create_app
 
 
@@ -32,3 +35,39 @@ def test_health_endpoint() -> None:
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json == {"status": "ok"}
+
+
+def test_secret_key_from_env() -> None:
+    """Test that SECRET_KEY is loaded from environment variable."""
+    with patch.dict(os.environ, {"SECRET_KEY": "test-secret-key-123"}):
+        app = create_app()
+        assert app.config["SECRET_KEY"] == "test-secret-key-123"
+
+
+def test_secret_key_fallback() -> None:
+    """Test that SECRET_KEY falls back to 'dev' when not set in environment."""
+    with patch.dict(os.environ, {}, clear=True):
+        app = create_app()
+        assert app.config["SECRET_KEY"] == "dev"
+
+
+def test_database_uri_from_env() -> None:
+    """Test that DATABASE_URL is loaded from environment variable."""
+    with patch.dict(os.environ, {"DATABASE_URL": "sqlite:///test.db"}):
+        app = create_app()
+        assert app.config["SQLALCHEMY_DATABASE_URI"] == "sqlite:///test.db"
+
+
+def test_database_uri_fallback() -> None:
+    """Test that DATABASE_URL falls back to sqlite when not set."""
+    with patch.dict(os.environ, {}, clear=True):
+        app = create_app()
+        assert app.config["SQLALCHEMY_DATABASE_URI"] == "sqlite:///kvizarena.db"
+
+
+def test_config_parameter_overrides_env() -> None:
+    """Test that config parameter can override environment variables."""
+    with patch.dict(os.environ, {"SECRET_KEY": "env-secret"}):
+        app = create_app({"SECRET_KEY": "config-secret"})
+        # Direct assignment means env is set first, then config overrides
+        assert app.config["SECRET_KEY"] == "config-secret"

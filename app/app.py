@@ -26,12 +26,16 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
                 template_folder=frontend_dir, 
                 static_folder=frontend_static_dir)
 
-    app.config.setdefault("SECRET_KEY", os.getenv("SECRET_KEY", "dev"))
-    app.config.setdefault(
-        "SQLALCHEMY_DATABASE_URI",
-        os.getenv("DATABASE_URL", "sqlite:///kvizarena.db"),
+    # Načte klíč z .env, a pokud tam není, použije "dev" jako záložní hodnotu
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")
+
+    # Načte URL databáze z .env, a pokud tam není, použije lokální sqlite
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+        "DATABASE_URL", "sqlite:///kvizarena.db"
     )
-    app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+
+    # Natvrdo vypne modifikace
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     if config:
         app.config.update(config)
