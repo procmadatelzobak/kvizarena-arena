@@ -14,9 +14,6 @@ const gameState = {
 let gameTimer = null; // ID for requestAnimationFrame
 let timerDuration = 15; // Default duration
 
-// Circle circumference (must match radius 45 * 2 * PI)
-const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 45;
-
 // Initialize the application
 document.addEventListener('DOMContentLoaded', initialize);
 
@@ -43,19 +40,19 @@ function startTimerLoop(duration) {
     timerDuration = duration;
     let startTime = Date.now();
 
-    const timerProgressCircle = document.querySelector('.timer-circle-progress');
-    const timerText = document.getElementById('timer-text');
+    // Find the new elements
+    const timerProgress = document.getElementById('timer-bar-progress');
+    const timerText = document.getElementById('timer-bar-text');
 
     // Check if timer elements exist
-    if (!timerProgressCircle || !timerText) {
+    if (!timerProgress || !timerText) {
         console.error('Timer elements not found in DOM');
         return;
     }
 
-    // Reset (set full circle)
-    timerProgressCircle.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE} ${CIRCLE_CIRCUMFERENCE}`;
-    timerProgressCircle.style.strokeDashoffset = 0;
-    timerProgressCircle.classList.remove('warning');
+    // Reset (set to full bar)
+    timerProgress.style.width = '100%';
+    timerProgress.classList.remove('warning');
     timerText.classList.remove('warning');
 
     function timerStep() {
@@ -66,32 +63,31 @@ function startTimerLoop(duration) {
         if (remainingSec <= 0) {
             remainingSec = 0;
 
-            // Time expired
+            // Time's up
             cancelAnimationFrame(gameTimer);
             timerText.textContent = 0;
+            timerProgress.style.width = '0%';
 
-            // Show that time is up and automatically submit empty answer
-            // Backend will evaluate this as "Time's up"
-            console.log("Čas vypršel!");
-            submitAnswer(""); // Submit empty answer
+            // Automatically submit a blank answer
+            console.log("Time's up!");
+            submitAnswer(""); // Submit blank
             return;
         }
 
         // Update text
         timerText.textContent = Math.ceil(remainingSec);
 
-        // Update SVG circle
+        // Update progress bar width
         const fraction = remainingSec / duration;
-        const offset = CIRCLE_CIRCUMFERENCE * (1 - fraction);
-        timerProgressCircle.style.strokeDashoffset = offset;
+        timerProgress.style.width = (fraction * 100) + '%';
 
         // Warning (last 5 seconds)
         if (remainingSec <= 5) {
-            timerProgressCircle.classList.add('warning');
+            timerProgress.classList.add('warning');
             timerText.classList.add('warning');
         }
 
-        // Continue loop
+        // Continue the loop
         gameTimer = requestAnimationFrame(timerStep);
     }
 
