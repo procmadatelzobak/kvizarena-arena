@@ -44,6 +44,12 @@ function startTimerLoop(duration) {
     const timerProgress = document.getElementById('timer-bar-progress');
     const timerText = document.getElementById('timer-bar-text');
 
+    // Check if timer elements exist
+    if (!timerProgress || !timerText) {
+        console.error('Timer elements not found in DOM');
+        return;
+    }
+
     // Reset (set to full bar)
     timerProgress.style.width = '100%';
     timerProgress.classList.remove('warning');
