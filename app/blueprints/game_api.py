@@ -9,7 +9,9 @@ import time
 import random
 from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, abort
-from app.database import db, Kviz, KvizOtazky, GameSession, Otazka
+from app.database import db, Kviz, KvizOtazky, GameSession, Otazka, User, GameResult
+from sqlalchemy import func as sqlalchemy_func
+from sqlalchemy.exc import IntegrityError
 
 # Create the Blueprint
 game_api_bp = Blueprint(
@@ -43,6 +45,31 @@ def _get_total_questions(kviz_id: int) -> int:
     """Helper to get total question count for a quiz."""
     return db.session.query(KvizOtazky).filter_by(kviz_id_fk=kviz_id).count()
 
+@game_api_bp.route('/user/login', methods=['POST'])
+def user_login():
+    """Handles user login/registration by nickname."""
+    data = request.get_json()
+    nickname = data.get('nickname')
+
+    if not nickname:
+        return jsonify({"error": "Nickname is required"}), 400
+
+    user = User.query.filter_by(nickname=nickname).first()
+
+    if not user:
+        try:
+            user = User(nickname=nickname)
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return jsonify({"error": "Nickname already taken"}), 409
+
+    return jsonify({
+        "user_id": user.id,
+        "nickname": user.nickname
+    }), 200
+
 @game_api_bp.route('/quizzes', methods=['GET'])
 def get_quizzes():
     """
@@ -69,6 +96,15 @@ def start_game(quiz_id: int):
     Returns a new session_id and the first question.
     """
     quiz = Kviz.query.get_or_404(quiz_id)
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "Invalid user"}), 404
     
     # Check if quiz is active and respects scheduled time
     if not quiz.is_active:
@@ -97,6 +133,19 @@ def start_game(quiz_id: int):
                 "start_time_utc": quiz_start_time.isoformat()
             }), 403  # 403 Forbidden
     
+    # Check for "Play Once" rule
+    if not quiz.allow_retakes:
+        existing_result = GameResult.query.filter_by(
+            user_id_fk=user.id, 
+            kviz_id_fk=quiz.kviz_id
+        ).first()
+        if existing_result:
+            return jsonify({
+                "error": "You have already completed this quiz.",
+                "status": "completed",
+                "final_score": existing_result.score
+            }), 403 # Forbidden
+    
     # Check if quiz has questions
     first_question_assoc = KvizOtazky.query.filter_by(
         kviz_id_fk=quiz.kviz_id, 
@@ -110,6 +159,7 @@ def start_game(quiz_id: int):
         # Create new game session
         new_session = GameSession(
             kviz_id_fk=quiz.kviz_id,
+            user_id_fk=user.id,
             last_question_timestamp=int(time.time())
         )
         db.session.add(new_session)
@@ -143,14 +193,16 @@ def submit_answer():
     """
     data = request.get_json()
     session_id = data.get('session_id')
+    user_id = data.get('user_id')
     answer_text = data.get('answer_text') # We expect the text of the answer
 
-    if not session_id or answer_text is None:
-        return jsonify({"error": "Missing session_id or answer_text"}), 400
+    if not session_id or not user_id or answer_text is None:
+        return jsonify({"error": "Missing session_id, user_id, or answer_text"}), 400
 
     # 1. Find the active session
     session = GameSession.query.filter_by(
         session_id=session_id, 
+        user_id_fk=user_id,
         is_active=True
     ).first()
     
@@ -212,9 +264,59 @@ def submit_answer():
     
     total_questions = _get_total_questions(quiz.kviz_id)
 
-    # 7. Check if quiz is finished
+    # 6. Check if quiz is finished
     if not next_question_assoc:
         session.is_active = False
+
+        # --- New Logic: Save GameResult and Calculate Stats ---
+
+        # 6a. Check if retakes are allowed. If so, delete old result.
+        if quiz.allow_retakes:
+            GameResult.query.filter_by(
+                user_id_fk=session.user_id_fk,
+                kviz_id_fk=session.kviz_id_fk
+            ).delete()
+
+        # 6b. Save the new GameResult
+        try:
+            new_result = GameResult(
+                user_id_fk=session.user_id_fk,
+                kviz_id_fk=session.kviz_id_fk,
+                score=session.score,
+                total_questions=total_questions,
+                answer_log=session.answer_log
+            )
+            db.session.add(new_result)
+        except IntegrityError:
+            # This could happen if user plays twice simultaneously (race condition)
+            # or if they already played a 'no-retake' quiz.
+            db.session.rollback()
+            return jsonify({"error": "Could not save result."}), 500
+
+        # 6c. Calculate ranking statistics
+        all_scores = db.session.query(GameResult.score).filter_by(kviz_id_fk=quiz.kviz_id).all()
+        total_players = len(all_scores)
+        scores_list = [s[0] for s in all_scores]
+
+        players_worse = sum(1 for s in scores_list if s < session.score)
+        players_same = sum(1 for s in scores_list if s == session.score) - 1 # (minus self)
+        players_better = total_players - players_worse - players_same - 1
+
+        percentile = 0
+        if total_players > 1:
+            percentile = (players_worse / (total_players - 1)) * 100
+        elif total_players == 1:
+            percentile = 100 # Top score!
+
+        ranking_summary = {
+            "total_players": total_players,
+            "players_worse": players_worse,
+            "players_same": players_same,
+            "players_better": players_better,
+            "percentile": round(percentile, 2)
+        }
+
+        # 6d. Commit and return final JSON
         db.session.commit()
         return jsonify({
             "feedback": feedback,
@@ -225,11 +327,13 @@ def submit_answer():
             "final_score": session.score,
             "total_questions": total_questions,
 
-            # NEW KEY: Send the complete answer history
-            "results_summary": session.answer_log
+            # NEW: Full summary for player
+            "results_summary": session.answer_log,
+            # NEW: Ranking stats
+            "ranking_summary": ranking_summary
         })
     
-    # 8. Send next question
+    # 7. Send next question
     db.session.commit()
     next_question = next_question_assoc.otazka
     
