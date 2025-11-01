@@ -64,7 +64,7 @@ function startTimerLoop(duration) {
 
             // Automatically submit a blank answer
             console.log("Time's up!");
-            submitAnswer(""); // Submit blank (or null)
+            submitAnswer(""); // Submit blank
             return;
         }
 
