@@ -10,6 +10,7 @@ from flask import Flask
 
 from .database import init_app as init_database
 from .blueprints import register_blueprints
+from .blueprints.auth import init_oauth
 
 
 def create_app(config: dict[str, Any] | None = None) -> Flask:
@@ -41,6 +42,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
         app.config.update(config)
 
     init_database(app)
+    init_oauth(app)
     register_blueprints(app)
 
     return app

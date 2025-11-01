@@ -10,15 +10,12 @@
 </head>
 <body>
     <div id="app">
-        <!-- Screen 0: Login -->
-        <div id="screen-login">
-            <h2>Vítejte v KvízAréně!</h2>
-            <p>Zadejte prosím přezdívku:</p>
-            <div class="form-group">
-                <input type="text" id="nickname-input" placeholder="Např. Franta123">
-            </div>
-            <button id="login-button">Vstoupit</button>
-            <p id="login-error" class="error-message" style="display:none;"></p>
+        <div id="user-status" style="padding: 10px; text-align: right;">
+            <a href="/api/auth/login/google" id="login-link">Přihlásit se přes Google</a>
+            <span id="user-info" style="display: none;">
+                Ahoj, <strong id="user-name"></strong>!
+                <a href="/api/auth/logout" id="logout-link">(Odhlásit se)</a>
+            </span>
         </div>
 
         <!-- Screen 1: Quiz List -->

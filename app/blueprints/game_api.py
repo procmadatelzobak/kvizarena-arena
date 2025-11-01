@@ -8,7 +8,7 @@ Handles the core gameplay logic:
 import time
 import random
 from datetime import datetime, timezone
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request, abort, session
 from app.database import db, Kviz, KvizOtazky, GameSession, Otazka, User, GameResult
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError
@@ -45,33 +45,25 @@ def _get_total_questions(kviz_id: int) -> int:
     """Helper to get total question count for a quiz."""
     return db.session.query(KvizOtazky).filter_by(kviz_id_fk=kviz_id).count()
 
-@game_api_bp.route('/user/login', methods=['POST'])
-def user_login():
-    """Handles user login/registration by nickname."""
-    data = request.get_json()
-    nickname = data.get('nickname')
+@game_api_bp.route('/user/me', methods=['GET'])
+def get_current_user():
+    """Gets the currently logged-in user from the session."""
+    user_id = session.get('user_id')
 
-    if not nickname:
-        return jsonify({"error": "Nickname is required"}), 400
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
 
-    user = User.query.filter_by(nickname=nickname).first()
-
+    user = User.query.get(user_id)
     if not user:
-        try:
-            user = User(nickname=nickname)
-            db.session.add(user)
-            db.session.commit()
-        except IntegrityError:
-            # Race condition: another request created this nickname simultaneously
-            db.session.rollback()
-            user = User.query.filter_by(nickname=nickname).first()
-            if not user:
-                return jsonify({"error": "Failed to create user"}), 500
+        return jsonify({"error": "User not found"}), 404
 
     return jsonify({
         "user_id": user.id,
-        "nickname": user.nickname
-    }), 200
+        "name": user.name,
+        "email": user.email,
+        "picture": user.profile_pic_url,
+        "is_admin": user.is_admin
+    })
 
 @game_api_bp.route('/quizzes', methods=['GET'])
 def get_quizzes():
@@ -99,15 +91,15 @@ def start_game(quiz_id: int):
     Returns a new session_id and the first question.
     """
     quiz = Kviz.query.get_or_404(quiz_id)
-    data = request.get_json()
-    user_id = data.get('user_id')
-
+    
+    user_id = session.get('user_id')
     if not user_id:
-        return jsonify({"error": "user_id is required"}), 400
+        return jsonify({"error": "Not authenticated"}), 401
 
     user = User.query.get(user_id)
     if not user:
-        return jsonify({"error": "Invalid user"}), 404
+        # This can happen if user is deleted but session persists
+        return jsonify({"error": "Invalid user session"}), 401
     
     # Check if quiz is active and respects scheduled time
     if not quiz.is_active:
@@ -196,36 +188,42 @@ def submit_answer():
     """
     data = request.get_json()
     session_id = data.get('session_id')
-    user_id = data.get('user_id')
     answer_text = data.get('answer_text') # We expect the text of the answer
 
-    if not session_id or not user_id or answer_text is None:
-        return jsonify({"error": "Missing session_id, user_id, or answer_text"}), 400
+    if not session_id or answer_text is None:
+        return jsonify({"error": "Missing session_id or answer_text"}), 400
+
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
 
     # 1. Find the active session
-    session = GameSession.query.filter_by(
-        session_id=session_id, 
-        user_id_fk=user_id,
+    game_session = GameSession.query.filter_by(
+        session_id=session_id,
         is_active=True
     ).first()
     
-    if not session:
+    if not game_session:
         return jsonify({"error": "Invalid or expired session"}), 404
 
+    # CRITICAL SECURITY CHECK: Ensure the logged-in user owns this session
+    if game_session.user_id_fk != user_id:
+        return jsonify({"error": "Session mismatch"}), 403 # Forbidden
+
     # 2. Get the *current* question from the session
-    question_assoc = _get_current_question(session)
+    question_assoc = _get_current_question(game_session)
     if not question_assoc:
         # This should not happen, but good to check
-        session.is_active = False
+        game_session.is_active = False
         db.session.commit()
         return jsonify({"error": "Question sequence error or quiz finished"}), 500
     
     question = question_assoc.otazka
-    quiz = session.kviz
+    quiz = game_session.kviz
 
     # 3. Check time limit
     time_limit = quiz.time_limit_per_question
-    time_taken = int(time.time()) - session.last_question_timestamp
+    time_taken = int(time.time()) - game_session.last_question_timestamp
     
     is_correct = False
     
@@ -236,7 +234,7 @@ def submit_answer():
         if answer_text == question.spravna_odpoved:
             is_correct = True
             feedback = "Correct!"
-            session.score += 1
+            game_session.score += 1
         else:
             feedback = "Incorrect"
 
@@ -251,17 +249,17 @@ def submit_answer():
     }
 
     # Append the log entry (must create a new list to notify SQLAlchemy)
-    new_log = list(session.answer_log)
+    new_log = list(game_session.answer_log)
     new_log.append(log_entry)
-    session.answer_log = new_log
+    game_session.answer_log = new_log
 
     # 6. Prepare for the *next* question
-    session.current_question_index += 1
-    session.last_question_timestamp = int(time.time())
+    game_session.current_question_index += 1
+    game_session.last_question_timestamp = int(time.time())
 
-    next_poradi = session.current_question_index + 1
+    next_poradi = game_session.current_question_index + 1
     next_question_assoc = KvizOtazky.query.filter_by(
-        kviz_id_fk=session.kviz_id_fk,
+        kviz_id_fk=game_session.kviz_id_fk,
         poradi=next_poradi
     ).first()
     
@@ -269,15 +267,15 @@ def submit_answer():
 
     # 6. Check if quiz is finished
     if not next_question_assoc:
-        session.is_active = False
+        game_session.is_active = False
 
         # --- New Logic: Save GameResult and Calculate Stats ---
 
         # 6a. Check if retakes are allowed. If so, delete old result.
         if quiz.allow_retakes:
             GameResult.query.filter_by(
-                user_id_fk=session.user_id_fk,
-                kviz_id_fk=session.kviz_id_fk
+                user_id_fk=game_session.user_id_fk,
+                kviz_id_fk=game_session.kviz_id_fk
             ).delete()
 
         # 6b. Calculate ranking statistics BEFORE adding new result
@@ -286,8 +284,8 @@ def submit_answer():
         total_players = len(all_scores) + 1  # +1 for the current player
         scores_list = [s[0] for s in all_scores]
 
-        players_worse = sum(1 for s in scores_list if s < session.score)
-        players_same = sum(1 for s in scores_list if s == session.score)
+        players_worse = sum(1 for s in scores_list if s < game_session.score)
+        players_same = sum(1 for s in scores_list if s == game_session.score)
         players_better = len(scores_list) - players_worse - players_same
 
         percentile = 0
@@ -307,11 +305,11 @@ def submit_answer():
         # 6c. Save the new GameResult
         try:
             new_result = GameResult(
-                user_id_fk=session.user_id_fk,
-                kviz_id_fk=session.kviz_id_fk,
-                score=session.score,
+                user_id_fk=game_session.user_id_fk,
+                kviz_id_fk=game_session.kviz_id_fk,
+                score=game_session.score,
                 total_questions=total_questions,
-                answer_log=session.answer_log
+                answer_log=game_session.answer_log
             )
             db.session.add(new_result)
         except IntegrityError:
@@ -326,13 +324,13 @@ def submit_answer():
             "feedback": feedback,
             "is_correct": is_correct,
             "correct_answer": question.spravna_odpoved,
-            "current_score": session.score,
+            "current_score": game_session.score,
             "quiz_finished": True,
-            "final_score": session.score,
+            "final_score": game_session.score,
             "total_questions": total_questions,
 
             # NEW: Full summary for player
-            "results_summary": session.answer_log,
+            "results_summary": game_session.answer_log,
             # NEW: Ranking stats
             "ranking_summary": ranking_summary
         })
@@ -345,7 +343,7 @@ def submit_answer():
         "feedback": feedback,
         "is_correct": is_correct,
         "correct_answer": question.spravna_odpoved,
-        "current_score": session.score,
+        "current_score": game_session.score,
         "quiz_finished": False,
         "next_question": {
             "number": next_poradi,

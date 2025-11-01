@@ -13,6 +13,7 @@ from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template,
 # Import new blueprints here
 from .admin import admin_bp
 from .game_api import game_api_bp
+from .auth import auth_bp
 
 
 def register_blueprints(app: Flask) -> None:
@@ -29,6 +30,9 @@ def register_blueprints(app: Flask) -> None:
     
     # New Game API blueprint
     app.register_blueprint(game_api_bp)
+    
+    # New Auth blueprint
+    app.register_blueprint(auth_bp)
 
 
 def create_health_blueprint() -> Blueprint:
