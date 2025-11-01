@@ -46,6 +46,12 @@ function startTimerLoop(duration) {
     const timerProgressCircle = document.querySelector('.timer-circle-progress');
     const timerText = document.getElementById('timer-text');
 
+    // Check if timer elements exist
+    if (!timerProgressCircle || !timerText) {
+        console.error('Timer elements not found in DOM');
+        return;
+    }
+
     // Reset (set full circle)
     timerProgressCircle.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE} ${CIRCLE_CIRCUMFERENCE}`;
     timerProgressCircle.style.strokeDashoffset = 0;
