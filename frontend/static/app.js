@@ -98,7 +98,7 @@ function startTimerLoop(duration) {
 // Check login status
 async function checkLoginStatus() {
     try {
-        const response = await fetch('/api/user/me');
+        const response = await fetch('/api/game/user/me');
         const user = await response.json();
 
         if (response.ok) {
