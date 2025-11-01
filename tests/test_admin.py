@@ -384,3 +384,46 @@ Another valid?,Answer2,Wrong1,Wrong2,Wrong3"""
         # Only 2 valid questions should be imported (row 2 is invalid)
         questions = db.session.query(KvizOtazky).filter_by(kviz_id_fk=quiz.kviz_id).count()
         assert questions == 2
+
+
+def test_import_csv_duplicate_questions_in_csv(client, app):
+    """Test that CSV import skips duplicate questions within the same CSV file."""
+    csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
+What is 2+2?,4,3,5,6
+What is 3+3?,6,5,7,8
+What is 2+2?,4,3,5,6
+What is 4+4?,8,7,9,10
+What is 3+3?,6,5,7,8"""
+    
+    data = {
+        'quiz_name': 'Duplicate Quiz',
+        'quiz_description': 'Has duplicate questions in CSV',
+        'time_limit': 15,
+        'csv_file': (io.BytesIO(csv_content.encode('utf-8')), 'duplicates.csv')
+    }
+    
+    response = client.post('/admin/kviz/import', data=data, follow_redirects=True)
+    assert response.status_code == 200
+    
+    with app.app_context():
+        quiz = Kviz.query.filter_by(nazev='Duplicate Quiz').first()
+        assert quiz is not None
+        
+        # Only 3 unique questions should be imported (2+2, 3+3, 4+4)
+        # even though the CSV has 5 rows
+        questions = db.session.query(KvizOtazky).filter_by(kviz_id_fk=quiz.kviz_id).order_by(KvizOtazky.poradi).all()
+        assert len(questions) == 3
+        
+        # Verify the questions are the unique ones
+        q1 = Otazka.query.get(questions[0].otazka_id_fk)
+        q2 = Otazka.query.get(questions[1].otazka_id_fk)
+        q3 = Otazka.query.get(questions[2].otazka_id_fk)
+        
+        assert q1.otazka == 'What is 2+2?'
+        assert q2.otazka == 'What is 3+3?'
+        assert q3.otazka == 'What is 4+4?'
+        
+        # Verify order is correct (poradi)
+        assert questions[0].poradi == 1
+        assert questions[1].poradi == 2
+        assert questions[2].poradi == 3
