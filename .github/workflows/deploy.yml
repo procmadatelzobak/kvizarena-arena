@@ -1,0 +1,18 @@
+name: Deploy to Dev Server
+
+# Spustí se pokaždé, když pushnete do větve 'main'
+on:
+  push:
+    branches:
+      - main  # Změňte na 'develop' nebo jinou větev, pokud chcete
+
+jobs:
+  deploy:
+    # Tento job poběží na našem runnerovi
+    runs-on: self-hosted
+
+    steps:
+      - name: Spustit deployment skript
+        run: |
+          echo "Spouštím /home/kvizarena/kvizarena-arena/deploy.sh"
+          /home/kvizarena/kvizarena-arena/deploy.sh
