@@ -10,6 +10,13 @@ const gameState = {
     timeLimit: 0
 };
 
+// Timer state variables
+let gameTimer = null; // ID for requestAnimationFrame
+let timerDuration = 15; // Default duration
+
+// Circle circumference (must match radius 45 * 2 * PI)
+const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * 45;
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', initialize);
 
@@ -29,6 +36,61 @@ function initialize() {
     
     // Load the quiz list
     fetchQuizzes();
+}
+
+// Start the timer loop with visual progress ring
+function startTimerLoop(duration) {
+    timerDuration = duration;
+    let startTime = Date.now();
+
+    const timerProgressCircle = document.querySelector('.timer-circle-progress');
+    const timerText = document.getElementById('timer-text');
+
+    // Reset (set full circle)
+    timerProgressCircle.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE} ${CIRCLE_CIRCUMFERENCE}`;
+    timerProgressCircle.style.strokeDashoffset = 0;
+    timerProgressCircle.classList.remove('warning');
+    timerText.classList.remove('warning');
+
+    function timerStep() {
+        const elapsedMs = Date.now() - startTime;
+        const elapsedSec = elapsedMs / 1000;
+        let remainingSec = duration - elapsedSec;
+
+        if (remainingSec <= 0) {
+            remainingSec = 0;
+
+            // Time expired
+            cancelAnimationFrame(gameTimer);
+            timerText.textContent = 0;
+
+            // Show that time is up and automatically submit empty answer
+            // Backend will evaluate this as "Time's up"
+            console.log("Čas vypršel!");
+            submitAnswer(""); // Submit empty answer
+            return;
+        }
+
+        // Update text
+        timerText.textContent = Math.ceil(remainingSec);
+
+        // Update SVG circle
+        const fraction = remainingSec / duration;
+        const offset = CIRCLE_CIRCUMFERENCE * (1 - fraction);
+        timerProgressCircle.style.strokeDashoffset = offset;
+
+        // Warning (last 5 seconds)
+        if (remainingSec <= 5) {
+            timerProgressCircle.classList.add('warning');
+            timerText.classList.add('warning');
+        }
+
+        // Continue loop
+        gameTimer = requestAnimationFrame(timerStep);
+    }
+
+    // Start the loop
+    gameTimer = requestAnimationFrame(timerStep);
 }
 
 // Fetch all available quizzes
@@ -144,6 +206,20 @@ function renderQuestion(data) {
         oldFeedback.remove();
     }
     
+    // Stop any previous timer
+    if (gameTimer) {
+        cancelAnimationFrame(gameTimer);
+    }
+
+    // Make sure we have the correct time limit
+    // Either from data.time_limit (at start) or save it to gameState
+    if (data.time_limit) {
+        gameState.timeLimit = data.time_limit;
+    }
+
+    // Start new timer with limit from API
+    startTimerLoop(gameState.timeLimit);
+    
     // Render answers
     const answersContainer = document.getElementById('answers-container');
     answersContainer.innerHTML = '';
@@ -159,6 +235,12 @@ function renderQuestion(data) {
 
 // Submit an answer
 async function submitAnswer(answerText) {
+    // STOP TIMER IMMEDIATELY
+    if (gameTimer) {
+        cancelAnimationFrame(gameTimer);
+        gameTimer = null;
+    }
+    
     // Disable all answer buttons to prevent multiple submissions
     const buttons = document.querySelectorAll('.answer-button');
     buttons.forEach(btn => btn.disabled = true);
@@ -196,6 +278,11 @@ function handleAnswerResponse(data) {
     // Wait a moment before proceeding
     setTimeout(() => {
         if (data.quiz_finished) {
+            // Stop timer if quiz finished
+            if (gameTimer) {
+                cancelAnimationFrame(gameTimer);
+                gameTimer = null;
+            }
             renderResults(data);
             showScreen('results');
         } else {

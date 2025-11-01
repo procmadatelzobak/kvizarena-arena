@@ -258,6 +258,58 @@ h3 {
     margin: 20px 0;
 }
 
+/* Timer Container */
+.timer-container {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    margin: 20px auto;
+}
+
+.timer-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.timer-circle-bg,
+.timer-circle-progress {
+    fill: none;
+    stroke-width: 10;
+}
+
+.timer-circle-bg {
+    stroke: #eee;
+}
+
+.timer-circle-progress {
+    stroke: #007bff;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
+}
+
+.timer-circle-progress.warning {
+    stroke: #dc3545;
+}
+
+#timer-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333;
+}
+
+#timer-text.warning {
+    color: #dc3545;
+}
+
 /* Responsive adjustments for larger screens */
 @media (min-width: 768px) {
     #app {
