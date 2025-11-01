@@ -258,56 +258,51 @@ h3 {
     margin: 20px 0;
 }
 
-/* Timer Container */
-.timer-container {
-    width: 100px;
-    height: 100px;
-    position: relative;
-    margin: 20px auto;
+/* Container for the whole timer (number + bar) */
+.timer-bar-container {
+    display: flex; /* Puts number and bar side-by-side */
+    align-items: center; /* Vertically centers them */
+    width: 100%; /* Full width of the parent (#app) */
+    padding: 10px 0;
+    margin-bottom: 15px; /* Space above the question */
 }
 
-.timer-svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-}
-
-.timer-circle-bg,
-.timer-circle-progress {
-    fill: none;
-    stroke-width: 10;
-}
-
-.timer-circle-bg {
-    stroke: #eee;
-}
-
-.timer-circle-progress {
-    stroke: #007bff;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 0.1s linear, stroke 0.3s;
-}
-
-.timer-circle-progress.warning {
-    stroke: #dc3545;
-}
-
-#timer-text {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5em;
+/* The number (remaining seconds) */
+#timer-bar-text {
+    font-size: 1.5em; /* Larger number */
     font-weight: bold;
     color: #333;
+    padding-right: 15px; /* Space between number and bar */
+    flex-shrink: 0; /* Prevents the number from shrinking */
+    transition: color 0.3s;
 }
 
-#timer-text.warning {
-    color: #dc3545;
+/* The "track" for the progress bar */
+.timer-bar-track {
+    flex-grow: 1; /* Takes up the remaining space */
+    height: 10px; /* Very thin */
+    background-color: #eee; /* Background color */
+    border-radius: 5px;
+    overflow: hidden; /* Clips the progress bar inside */
+}
+
+/* The progress bar itself */
+#timer-bar-progress {
+    height: 100%;
+    width: 100%; /* Starts at 100% */
+    background-color: #007bff; /* Blue */
+    border-radius: 5px;
+    /* Smooth animation for width and color */
+    transition: width 0.1s linear, background-color 0.3s; 
+}
+
+/* Warning class (for both text and bar) */
+#timer-bar-text.warning {
+    color: #dc3545; /* Red */
+}
+
+#timer-bar-progress.warning {
+    background-color: #dc3545; /* Red */
 }
 
 /* Responsive adjustments for larger screens */
