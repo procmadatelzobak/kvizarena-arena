@@ -7,6 +7,7 @@ Handles the core gameplay logic:
 """
 import time
 import random
+from datetime import datetime, timezone
 from flask import Blueprint, jsonify, request, abort
 from app.database import db, Kviz, KvizOtazky, GameSession, Otazka
 
@@ -68,6 +69,33 @@ def start_game(quiz_id: int):
     Returns a new session_id and the first question.
     """
     quiz = Kviz.query.get_or_404(quiz_id)
+    
+    # Check if quiz is active and respects scheduled time
+    if not quiz.is_active:
+        return jsonify({"error": "This quiz is not currently available."}), 404
+
+    if quiz.quiz_mode == 'scheduled':
+        if not quiz.start_time:
+            return jsonify({"error": "This scheduled quiz has no start time set."}), 500
+
+        # Get the current UTC time (timezone-aware)
+        now_utc = datetime.now(timezone.utc)
+
+        # Handle timezone-naive datetime from database (SQLite doesn't preserve timezone)
+        quiz_start_time = quiz.start_time
+        if quiz_start_time.tzinfo is None:
+            # Assume stored time is UTC and make it aware
+            quiz_start_time = quiz_start_time.replace(tzinfo=timezone.utc)
+
+        if now_utc < quiz_start_time:
+            # Calculate time remaining
+            time_remaining = quiz_start_time - now_utc
+            return jsonify({
+                "error": "Quiz has not started yet.",
+                "status": "scheduled",
+                "starts_in_seconds": int(time_remaining.total_seconds()),
+                "start_time_utc": quiz_start_time.isoformat()
+            }), 403  # 403 Forbidden
     
     # Check if quiz has questions
     first_question_assoc = KvizOtazky.query.filter_by(
@@ -157,7 +185,22 @@ def submit_answer():
         else:
             feedback = "Incorrect"
 
-    # 5. Prepare for the *next* question
+    # 5. Create a log entry for this answer
+    log_entry = {
+        "question_text": question.otazka,
+        "your_answer": answer_text,
+        "correct_answer": question.spravna_odpoved,
+        "is_correct": is_correct,
+        "feedback": feedback,
+        "source_url": question.zdroj_url or ""  # Ensure it's not None
+    }
+
+    # Append the log entry (must create a new list to notify SQLAlchemy)
+    new_log = list(session.answer_log)
+    new_log.append(log_entry)
+    session.answer_log = new_log
+
+    # 6. Prepare for the *next* question
     session.current_question_index += 1
     session.last_question_timestamp = int(time.time())
 
@@ -169,7 +212,7 @@ def submit_answer():
     
     total_questions = _get_total_questions(quiz.kviz_id)
 
-    # 6. Check if quiz is finished
+    # 7. Check if quiz is finished
     if not next_question_assoc:
         session.is_active = False
         db.session.commit()
@@ -180,10 +223,13 @@ def submit_answer():
             "current_score": session.score,
             "quiz_finished": True,
             "final_score": session.score,
-            "total_questions": total_questions
+            "total_questions": total_questions,
+
+            # NEW KEY: Send the complete answer history
+            "results_summary": session.answer_log
         })
     
-    # 7. Send next question
+    # 8. Send next question
     db.session.commit()
     next_question = next_question_assoc.otazka
     

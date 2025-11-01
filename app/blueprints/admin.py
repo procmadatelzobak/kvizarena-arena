@@ -7,6 +7,7 @@ for importing quizzes from CSV (exported from Vševěd).
 import csv
 import io
 import logging
+from datetime import datetime
 from flask import (
     Blueprint, render_template, request,
     flash, redirect, url_for
@@ -33,6 +34,18 @@ def kvizy_route():
         popis = request.form.get('quiz_description', '')
         time_limit = request.form.get('time_limit', 15)
 
+        quiz_mode = request.form.get('quiz_mode', 'on_demand')
+        start_time_str = request.form.get('start_time', '')
+
+        start_time_obj = None
+        if quiz_mode == 'scheduled' and start_time_str:
+            try:
+                # Expecting ISO format from the datetime-local input
+                start_time_obj = datetime.fromisoformat(start_time_str)
+            except ValueError:
+                flash("Invalid datetime format for Start Time.", "error")
+                return redirect(url_for('admin.kvizy_route'))
+
         if not nazev:
             flash("Quiz name cannot be empty.", "warning")
         else:
@@ -45,7 +58,10 @@ def kvizy_route():
                     new_quiz = Kviz(
                         nazev=nazev,
                         popis=popis,
-                        time_limit_per_question=int(time_limit)
+                        time_limit_per_question=int(time_limit),
+                        quiz_mode=quiz_mode,
+                        start_time=start_time_obj,
+                        is_active=request.form.get('is_active') == 'on'  # Checkbox
                     )
                     db.session.add(new_quiz)
                     db.session.commit()
@@ -94,6 +110,18 @@ def import_quiz_csv():
     quiz_name = request.form.get('quiz_name', '').strip()
     quiz_description = request.form.get('quiz_description', '').strip()
     time_limit = request.form.get('time_limit', 15)
+
+    quiz_mode = request.form.get('quiz_mode', 'on_demand')
+    start_time_str = request.form.get('start_time', '')
+
+    start_time_obj = None
+    if quiz_mode == 'scheduled' and start_time_str:
+        try:
+            start_time_obj = datetime.fromisoformat(start_time_str)
+        except ValueError:
+            flash("Invalid datetime format for Start Time.", "error")
+            return redirect(url_for('admin.kvizy_route'))
+
     file = request.files.get('csv_file')
 
     if not quiz_name or not file or file.filename == '':
@@ -114,7 +142,10 @@ def import_quiz_csv():
         new_quiz = Kviz(
             nazev=quiz_name,
             popis=quiz_description,
-            time_limit_per_question=int(time_limit)
+            time_limit_per_question=int(time_limit),
+            quiz_mode=quiz_mode,
+            start_time=start_time_obj,
+            is_active=request.form.get('is_active') == 'on'  # Checkbox
         )
         db.session.add(new_quiz)
         db.session.commit()  # Commit to get the new_quiz.kviz_id

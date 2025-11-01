@@ -54,6 +54,21 @@
                         <label for="time_limit">Čas na otázku (sekundy):</label>
                         <input type="number" id="time_limit" name="time_limit" value="15" required>
                     </div>
+                    <div class="form-group">
+                        <label for="quiz_mode">Režim kvízu:</label>
+                        <select id="quiz_mode" name="quiz_mode" onchange="toggleStartTime(this.value, 'start_time_wrapper')">
+                            <option value="on_demand" selected>On-demand (kdykoli)</option>
+                            <option value="scheduled">Scheduled (plánovaný)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="start_time_wrapper" style="display: none;">
+                        <label for="start_time">Čas spuštění:</label>
+                        <input type="datetime-local" id="start_time" name="start_time">
+                    </div>
+                    <div class="form-group">
+                        <input type="checkbox" id="is_active" name="is_active" value="on" checked>
+                        <label for="is_active">Aktivní (viditelný pro hráče)</label>
+                    </div>
                     <button type="submit">Vytvořit kvíz</button>
                 </form>
             </div>
@@ -74,6 +89,21 @@
                         <input type="number" id="import_time_limit" name="time_limit" value="15" required>
                     </div>
                     <div class="form-group">
+                        <label for="import_quiz_mode">Režim kvízu:</label>
+                        <select id="import_quiz_mode" name="quiz_mode" onchange="toggleStartTime(this.value, 'import_start_time_wrapper')">
+                            <option value="on_demand" selected>On-demand (kdykoli)</option>
+                            <option value="scheduled">Scheduled (plánovaný)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="import_start_time_wrapper" style="display: none;">
+                        <label for="import_start_time">Čas spuštění:</label>
+                        <input type="datetime-local" id="import_start_time" name="start_time">
+                    </div>
+                    <div class="form-group">
+                        <input type="checkbox" id="import_is_active" name="is_active" value="on" checked>
+                        <label for="import_is_active">Aktivní (viditelný pro hráče)</label>
+                    </div>
+                    <div class="form-group">
                         <label for="csv_file">Vyberte CSV soubor (z Vševěda):</label>
                         <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
                     </div>
@@ -92,6 +122,8 @@
                         <th>Popis</th>
                         <th>Počet otázek</th>
                         <th>Čas/Otázka (s)</th>
+                        <th>Režim</th>
+                        <th>Start</th>
                         <th>Akce</th>
                     </tr>
                 </thead>
@@ -102,6 +134,8 @@
                         <td>{{ item.kviz.popis | default('', true) }}</td>
                         <td>{{ item.pocet_otazek }}</td>
                         <td>{{ item.kviz.time_limit_per_question }}</td>
+                        <td>{{ 'Plánovaný' if item.kviz.quiz_mode == 'scheduled' else 'On-demand' }}</td>
+                        <td>{{ item.kviz.start_time.strftime('%Y-%m-%d %H:%M') if item.kviz.start_time else 'N/A' }}</td>
                         <td>
                             <form action="{{ url_for('admin.delete_quiz_route', kviz_id=item.kviz.kviz_id) }}" method="POST" onsubmit="return confirm('Opravdu chcete smazat kvíz \'{{ item.kviz.nazev }}\'?');">
                                 <button type="submit" class="delete-button">Smazat</button>
@@ -116,5 +150,11 @@
             {% endif %}
         </div>
     </div>
+
+    <script>
+        function toggleStartTime(mode, wrapperId) {
+            document.getElementById(wrapperId).style.display = (mode === 'scheduled') ? 'block' : 'none';
+        }
+    </script>
 </body>
 </html>

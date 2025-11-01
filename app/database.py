@@ -8,11 +8,13 @@ for the application.
 from __future__ import annotations
 import uuid
 import time
+from datetime import datetime
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
-    Integer, String, Text, ForeignKey, UniqueConstraint, event, Engine
+    Integer, String, Text, ForeignKey, UniqueConstraint, event, Engine, JSON, DateTime
 )
+from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 # SQLAlchemy instance, initialized in app.py
@@ -55,6 +57,15 @@ class Kviz(db.Model):
     time_limit_per_question: Mapped[int] = mapped_column(
         Integer, nullable=False, default=DEFAULT_QUESTION_TIME_LIMIT
     )
+
+    # New columns for Scheduled Quizzes
+    quiz_mode: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="on_demand"  # 'on_demand' or 'scheduled'
+    )
+    start_time: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True, server_default=None
+    )
+    is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
 
     # Relationship to access questions via the association table
     otazky_v_kvizu = relationship(
@@ -102,6 +113,9 @@ class GameSession(db.Model):
         Integer, nullable=False, default=lambda: int(time.time())
     )
     is_active: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=True)
+
+    # NEW COLUMN: Log for all answers for the final summary
+    answer_log: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
 
     # Relationship for easy access to quiz info
     kviz: Mapped["Kviz"] = relationship("Kviz")
