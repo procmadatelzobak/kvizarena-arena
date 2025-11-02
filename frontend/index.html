@@ -10,31 +10,31 @@
     <meta name="theme-color" content="#007bff">
 </head>
 <body>
-    <div id="app">
-        <nav class="main-nav">
-            <div class="nav-links-left">
-                <a href="#home" class="nav-link active" data-screen="home">
-                    <i class="fas fa-home"></i> Seznam kvízů
+    <nav class="main-nav">
+        <div class="nav-links-left">
+            <a href="#home" class="nav-link active" data-screen="home">
+                <i class="fas fa-home"></i> Seznam kvízů
+            </a>
+            <a href="#leaderboard" class="nav-link" data-screen="leaderboard">
+                <i class="fas fa-trophy"></i> Žebříčky
+            </a>
+        </div>
+        <div id="user-info" style="display: none;">
+            <img src="" id="user-avatar" class="avatar" alt="Avatar">
+            <span id="user-name"></span>
+            <i class="fas fa-chevron-down"></i>
+            <div class="user-dropdown">
+                <a href="#profile" class="nav-link" data-screen="profile">Můj Profil</a>
+                <a href="#settings" class="nav-link" data-screen="settings">Nastavení</a>
+                <a href="#" id="install-app-btn" style="display: none;">
+                    <i class="fas fa-download"></i> Nainstalovat aplikaci
                 </a>
-                <a href="#leaderboard" class="nav-link" data-screen="leaderboard">
-                    <i class="fas fa-trophy"></i> Žebříčky
-                </a>
+                <a href="/api/auth/logout" id="logout-link">Odhlásit se</a>
             </div>
-            <div id="user-info" style="display: none;">
-                <img src="" id="user-avatar" class="avatar" alt="Avatar">
-                <span id="user-name"></span>
-                <i class="fas fa-chevron-down"></i>
-                <div class="user-dropdown">
-                    <a href="#profile" class="nav-link" data-screen="profile">Můj Profil</a>
-                    <a href="#settings" class="nav-link" data-screen="settings">Nastavení</a>
-                    <a href="#" id="install-app-btn" style="display: none;">
-                        <i class="fas fa-download"></i> Nainstalovat aplikaci
-                    </a>
-                    <a href="/api/auth/logout" id="logout-link">Odhlásit se</a>
-                </div>
-            </div>
-        </nav>
+        </div>
+    </nav>
 
+    <div id="app" class="container">
         <!-- Screen 1: Home/Quiz List -->
         <div id="screen-home" class="hidden">
             <h2>Načítám kvízy...</h2>
