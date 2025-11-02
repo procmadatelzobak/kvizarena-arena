@@ -57,6 +57,8 @@ echo "(Pro produkční nasazení použijte gunicorn nebo waitress)"
 
 # We can't use 'flask run' anymore. We need to run the app
 # directly through a new entry point that uses socketio.
+# NOTE: run_socket.py is dynamically generated (as per project requirements)
+# to avoid committing environment-specific code to the repository.
 echo "Starting SocketIO server on http://0.0.0.0:$PORT..."
 
 # Create or overwrite a run_socket.py file to launch the app
