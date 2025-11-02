@@ -24,16 +24,6 @@
                     <a href="/api/auth/logout" id="logout-link">Odhlásit se</a>
                 </div>
             </div>
-
-            <details style="text-align: left; margin-top: 10px; font-size: 0.8em; position: absolute; right: 20px; top: 60px; background: #fff; padding: 5px; border: 1px solid #ccc; z-index: 9;">
-                <summary>Local Dev Login</summary>
-                <div id="local-login-form">
-                    <input type="text" id="local-user" placeholder="testuser" style="width: 100px;">
-                    <input type="password" id="local-pass" placeholder="testpass" style="width: 100px;">
-                    <button id="local-login-btn" style="padding: 2px 5px;">Login</button>
-                    <p id="local-login-error" style="color: red; display: none;"></p>
-                </div>
-            </details>
         </div>
 
         <nav class="main-nav">
@@ -118,6 +108,15 @@
                 <br>
                 Ikony od <a href="https://fontawesome.com" target="_blank">Font Awesome</a>
             </p>
+            <details style="text-align: left; margin-top: 10px; font-size: 0.8em; background: #fff; padding: 5px; border: 1px solid #ccc; z-index: 9; max-width: 300px; margin-left: auto; margin-right: auto;">
+                <summary>Local Dev Login</summary>
+                <div id="local-login-form">
+                    <input type="text" id="local-user" placeholder="testuser" style="width: 100px;">
+                    <input type="password" id="local-pass" placeholder="testpass" style="width: 100px;">
+                    <button id="local-login-btn" style="padding: 2px 5px;">Login</button>
+                    <p id="local-login-error" style="color: red; display: none;"></p>
+                </div>
+            </details>
         </footer>
     </div>
 
