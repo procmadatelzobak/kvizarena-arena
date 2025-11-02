@@ -6,7 +6,7 @@ import os
 from typing import Any
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, Response
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .database import init_app as init_database
@@ -53,6 +53,17 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     init_database(app)
     init_oauth(app)
     register_blueprints(app)
+
+    @app.after_request
+    def add_no_cache_headers(response: Response) -> Response:
+        """
+        Ensure responses aren't cached by proxies or browsers.
+        This is critical for preventing session hijacking.
+        """
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        return response
 
     return app
 
