@@ -31,10 +31,12 @@ def callback_google():
         token = oauth.google.authorize_access_token()
         user_info = oauth.google.parse_id_token(token)
     except AuthlibBaseError as e:
-        logger.error(f"OAuth error during callback: {type(e).__name__}")
+        # Log OAuth-specific errors with more context for debugging
+        logger.error(f"OAuth error during callback: {type(e).__name__} - {str(e)[:100]}")
         return redirect('/?error=auth_failed')
     except Exception as e:
-        logger.error(f"Unexpected error during OAuth callback: {type(e).__name__}")
+        # Log unexpected errors but limit details to avoid exposing sensitive data
+        logger.error(f"Unexpected error during OAuth callback: {type(e).__name__} - {str(e)[:100]}")
         return redirect('/?error=auth_failed')
 
     # Find or create user in database
