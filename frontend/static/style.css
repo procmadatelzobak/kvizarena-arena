@@ -452,7 +452,7 @@ h3 {
 /* Style the user info (now on dark background) */
 #user-info {
     color: white;
-    position: relative; /* For the dropdown */
+    position: relative; /* Creates positioning context for absolute positioned dropdown */
     padding: 10px;
     display: flex; /* Aligns avatar and name */
     align-items: center;
@@ -473,7 +473,7 @@ h3 {
 /* Make dropdown align to the right */
 .user-dropdown {
     /* (The .show class is toggled by JS) */
-    display: none; 
+    display: none;
     position: absolute;
     right: 0;
     top: 100%; /* Position below the bar */
@@ -489,7 +489,7 @@ h3 {
     display: block;
 }
 
-/* THIS FIXES THE WHITE TEXT */
+/* Ensure dropdown links have dark text for visibility on white background */
 .user-dropdown a {
     display: block;
     padding: 10px 15px;
