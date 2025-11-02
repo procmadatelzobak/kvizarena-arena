@@ -23,7 +23,7 @@ oauth = OAuth()
 def login_google():
     """Redirects to Google's login page."""
     # The redirect_uri must match *exactly* what's in Google Console
-    redirect_uri = url_for('auth.callback_google', _external=True)
+    redirect_uri = url_for('auth.callback_google', _external=True, _scheme='https')
     
     # Generate a secure nonce and store it in the session
     nonce = secrets.token_urlsafe(32)
