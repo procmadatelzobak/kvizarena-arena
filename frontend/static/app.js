@@ -33,6 +33,9 @@ function initialize() {
     }
     
     checkLoginStatus(); // Check if user is logged in
+    
+    // Add listener for local login button
+    document.getElementById('local-login-btn').addEventListener('click', loginLocal);
 }
 
 // Start the timer loop with visual progress ring
@@ -436,4 +439,31 @@ function showError(containerId, message) {
     errorDiv.className = 'error';
     errorDiv.textContent = message;
     container.appendChild(errorDiv);
+}
+
+// Local login function
+async function loginLocal() {
+    const username = document.getElementById('local-user').value;
+    const password = document.getElementById('local-pass').value;
+    const errorEl = document.getElementById('local-login-error');
+
+    try {
+        const response = await fetch('/api/auth/login/local', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username: username, password: password })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            errorEl.style.display = 'none';
+            checkLoginStatus(); // Reload user status (will show logged in user)
+        } else {
+            errorEl.textContent = data.error;
+            errorEl.style.display = 'block';
+        }
+    } catch (e) {
+        errorEl.textContent = 'Server error';
+        errorEl.style.display = 'block';
+    }
 }

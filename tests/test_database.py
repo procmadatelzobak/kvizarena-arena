@@ -128,14 +128,11 @@ def test_quiz_questions_association(app):
 def test_game_session_creation(app):
     """Test creating a game session."""
     with app.app_context():
-        # Create a user first
-        user = User(nickname="test_user")
-        db.session.add(user)
-        db.session.flush()
-        
-        # Create a quiz
+        # Create a quiz first
         quiz = Kviz(nazev="Session Test Quiz", popis="For testing sessions")
-        db.session.add(quiz)
+        # Create a user first
+        user = User(username="testuser", name="Test")
+        db.session.add_all([quiz, user])
         db.session.flush()
         
         # Create a game session
@@ -160,9 +157,15 @@ def test_game_session_creation(app):
 def test_foreign_key_constraint_enforced(app):
     """Test that foreign key constraints are enforced."""
     with app.app_context():
+        # Create a user
+        user = User(username="testuser", name="Test")
+        db.session.add(user)
+        db.session.commit()
+        
         # Try to create a GameSession with a non-existent kviz_id
         invalid_session = GameSession(
             session_id="invalid-session",
+            user_id_fk=user.id,
             kviz_id_fk=999999,  # Non-existent kviz
             score=0
         )
