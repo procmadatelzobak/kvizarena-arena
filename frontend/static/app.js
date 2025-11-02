@@ -12,6 +12,8 @@ const appState = {
     leaderboard: null
 };
 
+let deferredPrompt; // For PWA install prompt
+
 // Timer state variables
 let gameTimer = null; // ID for requestAnimationFrame
 let timerDuration = 15; // Default duration
@@ -72,6 +74,38 @@ function initialize() {
     // Handle hash changes
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange(); // Handle initial page load
+    
+    // --- ADD PWA INSTALL PROMPT LOGIC ---
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Show our custom install button
+        const installBtn = document.getElementById('install-app-btn');
+        if (installBtn) {
+            installBtn.style.display = 'block';
+        }
+    });
+
+    document.getElementById('install-app-btn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        // Hide the button
+        const installBtn = document.getElementById('install-app-btn');
+        if (installBtn) {
+            installBtn.style.display = 'none';
+        }
+        // Show the install prompt
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            // We've used the prompt, and can't use it again.
+            deferredPrompt = null;
+        }
+    });
+    // --- END PWA LOGIC ---
 }
 
 // Hash routing

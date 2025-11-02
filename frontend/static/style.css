@@ -448,18 +448,14 @@ h3 {
 }
 
 /* User Menu */
-.user-menu-container {
-    padding: 10px;
-    text-align: right;
-    background: #f8f9fa;
-    border-bottom: 1px solid #ddd;
-    position: relative;
-}
 #user-info {
     display: flex;
     align-items: center;
     justify-content: flex-end;
     cursor: pointer;
+    color: white;
+    position: relative; /* For the dropdown */
+    padding: 10px;
 }
 .avatar {
     width: 32px;
@@ -473,8 +469,9 @@ h3 {
 .user-dropdown {
     display: none;
     position: absolute;
-    top: 100%;
-    right: 10px;
+    top: 100%; /* Position below the bar */
+    right: 0;
+    left: auto; /* Reset left alignment */
     background: white;
     border: 1px solid #ddd;
     border-radius: 5px;
@@ -499,7 +496,9 @@ h3 {
 .main-nav {
     display: flex;
     background: #343a40;
-    justify-content: center;
+    justify-content: space-between; /* This pushes items apart */
+    align-items: center; /* This vertically centers them */
+    padding: 0 10px; /* Add some padding */
 }
 .main-nav .nav-link {
     padding: 15px 20px;
@@ -586,4 +585,14 @@ h3 {
 
 .delete-button:hover {
     background-color: #c82333;
+}
+
+/* Add to end of file */
+.main-nav .nav-links-left {
+    display: flex; /* Keeps left-side links together */
+}
+
+/* Style for the install button icon */
+#install-app-btn i {
+    margin-right: 8px;
 }
