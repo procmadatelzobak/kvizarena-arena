@@ -12,6 +12,8 @@ from flask import Blueprint, jsonify, request, abort, session
 from app.database import db, Kviz, KvizOtazky, GameSession, Otazka, User, GameResult
 from sqlalchemy import func as sqlalchemy_func
 from sqlalchemy.exc import IntegrityError
+from app.achievements import check_and_award_achievements
+from collections import Counter
 
 # Create the Blueprint
 game_api_bp = Blueprint(
@@ -251,7 +253,8 @@ def submit_answer():
         "correct_answer": question.spravna_odpoved,
         "is_correct": is_correct,
         "feedback": feedback,
-        "source_url": question.zdroj_url or ""  # Ensure it's not None
+        "source_url": question.zdroj_url or "",  # Ensure it's not None
+        "tema": question.tema or "General"  # Add tema (topic)
     }
 
     # Append the log entry (must create a new list to notify SQLAlchemy)
@@ -315,7 +318,8 @@ def submit_answer():
                 kviz_id_fk=game_session.kviz_id_fk,
                 score=game_session.score,
                 total_questions=total_questions,
-                answer_log=game_session.answer_log
+                answer_log=game_session.answer_log,
+                ranking_summary=ranking_summary
             )
             db.session.add(new_result)
         except IntegrityError:
@@ -326,6 +330,10 @@ def submit_answer():
 
         # 6d. Commit and return final JSON
         db.session.commit()
+        
+        # Check for achievements *after* result is committed
+        check_and_award_achievements(game_session.user_id_fk, new_result)
+        
         return jsonify({
             "feedback": feedback,
             "is_correct": is_correct,
@@ -358,3 +366,95 @@ def submit_answer():
         },
         "total_questions": total_questions
     })
+
+@game_api_bp.route('/user/my-stats', methods=['GET'])
+def get_my_stats():
+    """
+    Returns all history and aggregated stats for the logged-in user.
+    """
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    # 1. Get all game results (history)
+    results = GameResult.query.filter_by(user_id_fk=user_id).order_by(GameResult.finished_at.desc()).all()
+
+    history = []
+    topic_stats = Counter()
+    total_correct = 0
+    total_answered = 0
+
+    for res in results:
+        history.append({
+            "quiz_name": res.kviz.nazev,
+            "score": res.score,
+            "total_questions": res.total_questions,
+            "percentile": res.ranking_summary.get("percentile", 0), # Get percentile from saved log
+            "finished_at": res.finished_at.isoformat()
+        })
+
+        # 2. Aggregate topic stats
+        for log in res.answer_log:
+            if log.get("is_correct"):
+                topic_stats[log.get("tema", "General")] += 1
+                total_correct += 1
+            total_answered += 1
+
+    # Format topic stats
+    aggregated_stats = {
+        "total_quizzes": len(history),
+        "overall_accuracy": (total_correct / total_answered * 100) if total_answered > 0 else 0,
+        "by_topic": [
+            {"topic": topic, "correct_answers": count}
+            for topic, count in topic_stats.most_common()
+        ]
+    }
+
+    # 3. Get all earned achievements
+    from app.database import UserAchievement
+    achievements = UserAchievement.query.filter_by(user_id_fk=user_id).all()
+    earned_achievements = [
+        {
+            "name": ach.achievement.name,
+            "description": ach.achievement.description,
+            "icon_class": ach.achievement.icon_class,
+            "earned_at": ach.earned_at.isoformat()
+        } for ach in achievements
+    ]
+
+    return jsonify({
+        "history": history,
+        "detailed_stats": aggregated_stats,
+        "achievements": earned_achievements
+    })
+
+@game_api_bp.route('/leaderboard/global', methods=['GET'])
+def get_global_leaderboard():
+    """Returns the top 50 users based on average percentile."""
+
+    # This is a complex query:
+    # 1. Group all results by user
+    # 2. Calculate average percentile for each user
+    # 3. Join with User table to get names
+    # 4. Order by average percentile and limit to 50
+
+    leaderboard = db.session.query(
+        User.name,
+        User.profile_pic_url,
+        sqlalchemy_func.avg(GameResult.score / GameResult.total_questions * 100).label('avg_score'),
+        sqlalchemy_func.count(GameResult.id).label('quizzes_played')
+    ).join(GameResult, User.id == GameResult.user_id_fk) \
+     .group_by(User.id) \
+     .order_by(sqlalchemy_func.avg(GameResult.score / GameResult.total_questions * 100).desc()) \
+     .limit(50).all()
+
+    leaderboard_data = [
+        {
+            "name": row.name,
+            "picture": row.profile_pic_url,
+            "avg_score": round(row.avg_score, 2),
+            "quizzes_played": row.quizzes_played
+        } for row in leaderboard
+    ]
+
+    return jsonify(leaderboard_data)

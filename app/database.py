@@ -144,6 +144,9 @@ class GameResult(db.Model):
 
     # Stores the detailed log from the session for per-question stats
     answer_log: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    
+    # Stores ranking statistics (percentile, etc.)
+    ranking_summary: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
     user: Mapped["User"] = relationship("User", back_populates="results")
     kviz: Mapped["Kviz"] = relationship("Kviz")
@@ -177,6 +180,32 @@ class GameSession(db.Model):
     kviz: Mapped["Kviz"] = relationship("Kviz")
     user: Mapped["User"] = relationship("User")
 
+class Achievement(db.Model):
+    """Defines an achievement (e.g., 'Professor')."""
+    __tablename__ = "achievements"
+
+    id: Mapped[str] = mapped_column(String(50), primary_key=True) # e.g., 'professor', 'flash'
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    icon_class: Mapped[str] = mapped_column(String(50), nullable=False) # e.g., 'fas fa-book'
+
+class UserAchievement(db.Model):
+    """Links a User to an Achievement they have earned."""
+    __tablename__ = "user_achievements"
+    __table_args__ = (
+        UniqueConstraint('user_id_fk', 'achievement_id_fk', name='uq_user_achievement'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id_fk: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    achievement_id_fk: Mapped[str] = mapped_column(ForeignKey("achievements.id"))
+    earned_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User")
+    achievement: Mapped["Achievement"] = relationship("Achievement")
+
 def init_app(app: Flask) -> None:
     """
     Initializes the SQLAlchemy extension with the given Flask app
@@ -187,9 +216,11 @@ def init_app(app: Flask) -> None:
     @app.cli.command("init-db")
     def init_db_command():
         """Creates the database tables."""
+        from app.achievements import init_achievements
         with app.app_context():
             db.create_all()
-        print("Database initialized successfully.")
+            init_achievements()
+        print("Database initialized and achievements populated.")
 
 # Ensure SQLite enforces FOREIGN KEY constraints
 @event.listens_for(Engine, "connect")
