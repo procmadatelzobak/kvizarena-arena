@@ -12,6 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from .database import init_app as init_database
 from .blueprints import register_blueprints
 from .blueprints.auth import init_oauth
+from .sockets import socketio
 
 
 def create_app(config: dict[str, Any] | None = None) -> Flask:
@@ -52,6 +53,7 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
 
     init_database(app)
     init_oauth(app)
+    socketio.init_app(app)
     register_blueprints(app)
 
     @app.after_request

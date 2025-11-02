@@ -55,5 +55,27 @@ PORT=$(grep "PORT=" .env | cut -d'=' -f2)
 echo "Aplikace poběží na: [http://0.0.0.0](http://0.0.0.0):$PORT"
 echo "(Pro produkční nasazení použijte gunicorn nebo waitress)"
 
-# Spustí aplikaci standardním způsobem
-flask run --host=0.0.0.0 --port=$PORT
+# We can't use 'flask run' anymore. We need to run the app
+# directly through a new entry point that uses socketio.
+# NOTE: run_socket.py is dynamically generated (as per project requirements)
+# to avoid committing environment-specific code to the repository.
+echo "Starting SocketIO server on http://0.0.0.0:$PORT..."
+
+# Create or overwrite a run_socket.py file to launch the app
+cat << EOF > run_socket.py
+import eventlet
+eventlet.monkey_patch()
+
+from app import create_app
+from app.sockets import socketio
+import os
+
+app = create_app()
+
+if __name__ == '__main__':
+    port = int(os.getenv("PORT", "5000"))
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
+EOF
+
+# Execute the new run file
+python run_socket.py

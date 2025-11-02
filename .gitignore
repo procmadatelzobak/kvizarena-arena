@@ -5,6 +5,7 @@ venv/
 # Python cache
 __pycache__/
 *.pyc
+run_socket.py
 
 # Soubor lokální databáze
 *.db
