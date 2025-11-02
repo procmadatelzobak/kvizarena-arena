@@ -70,11 +70,8 @@ def get_quiz_list():
     """
     Returns a list of all active quizzes available to play.
     """
-    # We only want to show quizzes that are 'active' and 'on_demand'
-    # or 'scheduled' quizzes whose start time has passed.
-    # (Note: This logic can be simplified for now)
-
-    # We will query *all* quizzes, the frontend will handle 'scheduled' status
+    # Filter only active quizzes and order by name
+    # The frontend will handle scheduled quiz availability based on start_time_utc
     quizzes = Kviz.query.filter_by(is_active=True).order_by(Kviz.nazev).all()
 
     quiz_list_data = []
