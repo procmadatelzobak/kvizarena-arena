@@ -34,6 +34,22 @@ def register_blueprints(app: Flask) -> None:
     # New Auth blueprint
     app.register_blueprint(auth_bp)
 
+    # --- PWA FILE ROUTES ---
+    # Get the absolute path to the frontend directory
+    # __file__ is app/blueprints/__init__.py
+    # We need to go up to the project root (3 levels) then into frontend
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'frontend')
+
+    @app.route('/sw.js')
+    def serve_sw():
+        """Serves the service worker file from the frontend directory."""
+        return send_from_directory(frontend_dir, 'sw.js')
+
+    @app.route('/manifest.json')
+    def serve_manifest():
+        """Serves the manifest file from the frontend directory."""
+        return send_from_directory(frontend_dir, 'manifest.json')
+
 
 def create_health_blueprint() -> Blueprint:
     """Creates a basic health-check blueprint."""
@@ -50,7 +66,9 @@ def create_main_blueprint() -> Blueprint:
     blueprint = Blueprint("main", __name__)
     
     # Get the absolute path to the frontend directory
-    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
+    # __file__ is app/blueprints/__init__.py
+    # We need to go up to the project root (3 levels) then into frontend
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'frontend')
 
     @blueprint.get("/")
     def index():
