@@ -449,54 +449,59 @@ h3 {
     transform: scale(0.98);
 }
 
-/* User Menu */
+/* Style the user info (now on dark background) */
 #user-info {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    cursor: pointer;
     color: white;
-    position: relative; /* Positioning context for absolute positioned dropdown menu */
+    position: relative; /* Creates positioning context for absolute positioned dropdown */
     padding: 10px;
+    display: flex; /* Aligns avatar and name */
+    align-items: center;
+    cursor: pointer;
 }
+
 .avatar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
     margin-right: 8px;
 }
+
 #user-info i {
     margin-left: 5px;
 }
+
+/* Make dropdown align to the right */
 .user-dropdown {
+    /* (The .show class is toggled by JS) */
     display: none;
     position: absolute;
-    top: 100%; /* Positioned below the navigation bar */
-    right: 0; /* Aligned to the right edge */
-    left: auto; /* Override default left alignment */
+    right: 0;
+    top: 100%; /* Position below the bar */
     background: white;
     border: 1px solid #ddd;
     border-radius: 5px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     z-index: 100;
-    min-width: 150px;
+    min-width: 170px;
 }
-.user-dropdown a.nav-link,
-.user-dropdown a#logout-link {
-    display: block;
-    padding: 10px 15px;
-    color: #333 !important; /* Force black/dark text */
-    text-decoration: none;
-    /* We also remove the bottom border it inherits */
-    border-bottom: none;
-}
-.user-dropdown a.nav-link:hover {
-    background: #f4f4f4;
-    /* Ensure it doesn't inherit nav-link hover */
-    border-bottom: none;
-}
+
 .user-dropdown.show {
     display: block;
+}
+
+/* Ensure dropdown links have dark text for visibility on white background */
+.user-dropdown a {
+    display: block;
+    padding: 10px 15px;
+    color: #333; /* Links inside dropdown are dark */
+    text-decoration: none;
+    white-space: nowrap;
+}
+.user-dropdown a:hover {
+    background: #f4f4f4;
+}
+.user-dropdown a i {
+    margin-right: 8px;
 }
 
 /* Main Navigation */
