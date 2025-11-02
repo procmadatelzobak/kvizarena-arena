@@ -7,6 +7,7 @@ for the main Flask application.
 
 from __future__ import annotations
 import os
+from pathlib import Path
 
 from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template, send_from_directory
 
@@ -14,6 +15,9 @@ from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template,
 from .admin import admin_bp
 from .game_api import game_api_bp
 from .auth import auth_bp
+
+# Calculate the frontend directory path once
+FRONTEND_DIR = Path(__file__).parent.parent.parent / 'frontend'
 
 
 def register_blueprints(app: Flask) -> None:
@@ -34,6 +38,18 @@ def register_blueprints(app: Flask) -> None:
     # New Auth blueprint
     app.register_blueprint(auth_bp)
 
+    # --- PWA FILE ROUTES ---
+
+    @app.route('/sw.js')
+    def serve_sw():
+        """Serves the service worker file from the frontend directory."""
+        return send_from_directory(str(FRONTEND_DIR), 'sw.js')
+
+    @app.route('/manifest.json')
+    def serve_manifest():
+        """Serves the manifest file from the frontend directory."""
+        return send_from_directory(str(FRONTEND_DIR), 'manifest.json')
+
 
 def create_health_blueprint() -> Blueprint:
     """Creates a basic health-check blueprint."""
@@ -48,9 +64,6 @@ def create_health_blueprint() -> Blueprint:
 def create_main_blueprint() -> Blueprint:
     """Creates the main blueprint for homepage redirect."""
     blueprint = Blueprint("main", __name__)
-    
-    # Get the absolute path to the frontend directory
-    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend')
 
     @blueprint.get("/")
     def index():
@@ -60,11 +73,11 @@ def create_main_blueprint() -> Blueprint:
     @blueprint.get("/manifest.json")
     def manifest():
         # Serve the PWA manifest
-        return send_from_directory(frontend_dir, 'manifest.json')
+        return send_from_directory(str(FRONTEND_DIR), 'manifest.json')
     
     @blueprint.get("/sw.js")
     def service_worker():
         # Serve the service worker
-        return send_from_directory(frontend_dir, 'sw.js')
+        return send_from_directory(str(FRONTEND_DIR), 'sw.js')
 
     return blueprint

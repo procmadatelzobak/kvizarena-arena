@@ -92,3 +92,23 @@ def test_proxy_fix_middleware_applied() -> None:
     assert app.wsgi_app.x_for == 1
     assert app.wsgi_app.x_proto == 1
     assert app.wsgi_app.x_host == 1
+
+
+def test_pwa_service_worker_route() -> None:
+    """Test that /sw.js route is accessible."""
+    app = create_app({"TESTING": True})
+    client = app.test_client()
+    
+    response = client.get("/sw.js")
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/javascript") or response.content_type.startswith("application/javascript")
+
+
+def test_pwa_manifest_route() -> None:
+    """Test that /manifest.json route is accessible."""
+    app = create_app({"TESTING": True})
+    client = app.test_client()
+    
+    response = client.get("/manifest.json")
+    assert response.status_code == 200
+    assert response.content_type == "application/json"

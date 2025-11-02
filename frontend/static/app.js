@@ -420,7 +420,7 @@ function renderResults(data) {
 
 // Show a specific screen and hide others
 function showScreen(screenName) {
-    const screens = ['login', 'quiz-list', 'game', 'results'];
+    const screens = ['quiz-list', 'game', 'results'];
     
     screens.forEach(name => {
         const screen = document.getElementById(`screen-${name}`);
