@@ -69,9 +69,6 @@ function initialize() {
         });
     });
     
-    // Add listener for local login button
-    document.getElementById('local-login-btn').addEventListener('click', loginLocal);
-    
     // Handle hash changes
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange(); // Handle initial page load
@@ -160,7 +157,6 @@ async function checkLoginStatus() {
             appState.userId = user.user_id;
             document.getElementById('user-name').textContent = user.name;
             document.getElementById('user-avatar').src = user.picture || 'default-avatar.png';
-            document.getElementById('login-link').style.display = 'none';
             document.getElementById('user-info').style.display = 'flex';
 
             fetchQuizzes(); // Fetch quizzes now
@@ -168,15 +164,13 @@ async function checkLoginStatus() {
             handleHashChange();
 
         } else {
-            // User is not logged in
-            document.getElementById('login-link').style.display = 'inline';
-            document.getElementById('user-info').style.display = 'none';
-            window.location.hash = '#home';
-            handleHashChange();
+            // User is not logged in. Redirect them to the login page.
+            // The server will see they have no session and serve login.html.
+            window.location.href = '/';
         }
     } catch (e) {
         console.error("Auth check failed", e);
-        document.getElementById('login-link').style.display = 'inline';
+        window.location.href = '/';
     }
 }
 
@@ -638,29 +632,4 @@ async function loadProfile() {
     }
 }
 
-// Local login function
-async function loginLocal() {
-    const username = document.getElementById('local-user').value;
-    const password = document.getElementById('local-pass').value;
-    const errorEl = document.getElementById('local-login-error');
 
-    try {
-        const response = await fetch('/api/auth/login/local', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ username: username, password: password })
-        });
-        const data = await response.json();
-
-        if (response.ok) {
-            errorEl.style.display = 'none';
-            checkLoginStatus(); // Reload user status (will show logged in user)
-        } else {
-            errorEl.textContent = data.error;
-            errorEl.style.display = 'block';
-        }
-    } catch (e) {
-        errorEl.textContent = 'Server error';
-        errorEl.style.display = 'block';
-    }
-}

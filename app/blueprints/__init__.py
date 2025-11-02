@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template, send_from_directory
+from flask import Blueprint, Flask, jsonify, redirect, url_for, render_template, send_from_directory, session
 
 # Import new blueprints here
 from .admin import admin_bp
@@ -67,8 +67,16 @@ def create_main_blueprint() -> Blueprint:
 
     @blueprint.get("/")
     def index():
-        # Serve the main frontend application
-        return render_template('index.html')
+        """
+        Serves the main app portal if logged in,
+        or the login page if not.
+        """
+        if 'user_id' in session:
+            # User is logged in, serve the main app
+            return render_template('index.html')
+        else:
+            # User is not logged in, serve the new login page
+            return render_template('login.html')
     
     @blueprint.get("/privacy")
     def privacy_page():
