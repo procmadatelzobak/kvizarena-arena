@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Přihlášení - KvízAréna</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="/static/favicon.ico">
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        /* Simple styles to center the login box */
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f4f4f4;
+        }
+        .login-container {
+            background: #fff;
+            padding: 2rem 3rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .login-container h1 {
+            margin-top: 0;
+        }
+        .google-login-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #4285F4;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 0;
+            transition: background-color 0.3s;
+        }
+        .google-login-btn:hover {
+            background-color: #357ae8;
+        }
+        .dev-login {
+            margin-top: 20px;
+            font-size: 0.9em;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        .dev-login input {
+            width: calc(50% - 10px);
+            margin: 5px 0;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <h1>KvízAréna</h1>
+        <p>Přihlaste se prosím pro pokračování</p>
+
+        <a href="/api/auth/login/google" id="login-link" class="google-login-btn">
+            Přihlásit se přes Google
+        </a>
+
+        <details class="dev-login">
+            <summary>Local Dev Login</summary>
+            <div id="local-login-form">
+                <input type="text" id="local-user" placeholder="testuser">
+                <input type="password" id="local-pass" placeholder="testpass">
+                <button id="local-login-btn" style="padding: 2px 5px;">Login</button>
+                <p id="local-login-error" style="color: red; display: none;"></p>
+            </div>
+        </details>
+    </div>
+
+    <footer>
+        <p>
+            &copy; 2025 KvízAréna | 
+            <a href="/privacy">Zásady ochrany osobních údajů</a> | 
+            <a href="/terms">Podmínky použití</a>
+        </p>
+    </footer>
+
+    <script>
+        document.getElementById('local-login-btn').addEventListener('click', loginLocal);
+        document.getElementById('local-pass').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loginLocal();
+        });
+
+        async function loginLocal() {
+            const username = document.getElementById('local-user').value;
+            const password = document.getElementById('local-pass').value;
+            const errorEl = document.getElementById('local-login-error');
+
+            try {
+                const response = await fetch('/api/auth/login/local', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username: username, password: password })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    errorEl.style.display = 'none';
+                    // Success! Redirect to '/'
+                    // The server will now see the session and serve index.html
+                    window.location.href = '/'; 
+                } else {
+                    errorEl.textContent = data.error;
+                    errorEl.style.display = 'block';
+                }
+            } catch (e) {
+                errorEl.textContent = 'Server error';
+                errorEl.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

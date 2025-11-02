@@ -12,8 +12,6 @@
 <body>
     <div id="app">
         <div id="user-status" class="user-menu-container">
-            <a href="/api/auth/login/google" id="login-link">Přihlásit se přes Google</a>
-
             <div id="user-info" style="display: none;">
                 <img src="" id="user-avatar" class="avatar" alt="Avatar">
                 <span id="user-name"></span>
@@ -100,24 +98,6 @@
             <button id="delete-account-btn" class="delete-button">Smazat můj účet</button>
         </div>
 
-        <footer style="text-align: center; padding: 20px; margin-top: 30px; border-top: 1px solid #eee; font-size: 0.9em;">
-            <p>
-                &copy; 2025 KvízAréna | 
-                <a href="/privacy">Zásady ochrany osobních údajů</a> | 
-                <a href="/terms">Podmínky použití</a>
-                <br>
-                Ikony od <a href="https://fontawesome.com" target="_blank">Font Awesome</a>
-            </p>
-            <details style="text-align: left; margin-top: 10px; font-size: 0.8em; background: #fff; padding: 5px; border: 1px solid #ccc; z-index: 9; max-width: 300px; margin-left: auto; margin-right: auto;">
-                <summary>Local Dev Login</summary>
-                <div id="local-login-form">
-                    <input type="text" id="local-user" placeholder="testuser" style="width: 100px;">
-                    <input type="password" id="local-pass" placeholder="testpass" style="width: 100px;">
-                    <button id="local-login-btn" style="padding: 2px 5px;">Login</button>
-                    <p id="local-login-error" style="color: red; display: none;"></p>
-                </div>
-            </details>
-        </footer>
     </div>
 
     <script src="/static/app.js"></script>
