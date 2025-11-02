@@ -164,13 +164,14 @@ async function checkLoginStatus() {
             handleHashChange();
 
         } else {
-            // User is not logged in. Redirect them to the login page.
-            // The server will see they have no session and serve login.html.
-            window.location.href = '/';
+            // Auth failed (e.g., user deleted from DB, or 404 error).
+            // Force logout to clear the bad session cookie.
+            window.location.href = '/api/auth/logout';
         }
     } catch (e) {
         console.error("Auth check failed", e);
-        window.location.href = '/';
+        // Also force logout on any failure
+        window.location.href = '/api/auth/logout';
     }
 }
 
