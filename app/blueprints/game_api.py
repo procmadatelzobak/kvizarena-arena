@@ -66,23 +66,30 @@ def get_current_user():
     })
 
 @game_api_bp.route('/quizzes', methods=['GET'])
-def get_quizzes():
+def get_quiz_list():
     """
-    Returns a list of all available quizzes.
-    Each quiz includes: id, nazev, popis, pocet_otazek.
+    Returns a list of all active quizzes available to play.
     """
-    quizzes = Kviz.query.all()
-    
-    result = []
-    for kviz in quizzes:
-        result.append({
-            "id": kviz.kviz_id,
-            "nazev": kviz.nazev,
-            "popis": kviz.popis,
-            "pocet_otazek": _get_total_questions(kviz.kviz_id)
+    # We only want to show quizzes that are 'active' and 'on_demand'
+    # or 'scheduled' quizzes whose start time has passed.
+    # (Note: This logic can be simplified for now)
+
+    # We will query *all* quizzes, the frontend will handle 'scheduled' status
+    quizzes = Kviz.query.filter_by(is_active=True).order_by(Kviz.nazev).all()
+
+    quiz_list_data = []
+    for quiz in quizzes:
+        quiz_list_data.append({
+            "id": quiz.kviz_id,
+            "nazev": quiz.nazev,
+            "popis": quiz.popis,
+            "pocet_otazek": _get_total_questions(quiz.kviz_id),
+            "mode": quiz.quiz_mode,
+            "start_time_utc": quiz.start_time.isoformat() if quiz.start_time else None,
+            "allow_retakes": quiz.allow_retakes
         })
-    
-    return jsonify(result), 200
+
+    return jsonify(quiz_list_data)
 
 @game_api_bp.route('/start/<int:quiz_id>', methods=['POST'])
 def start_game(quiz_id: int):
