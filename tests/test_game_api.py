@@ -214,6 +214,9 @@ def test_get_quizzes(logged_in_client, app):
     assert quiz['nazev'] == "API Test Quiz"
     assert quiz['popis'] is None
     assert quiz['pocet_otazek'] == 2
+    assert quiz['mode'] == "on_demand"  # Default value from database model
+    assert quiz['start_time_utc'] is None  # Default value is None
+    assert quiz['allow_retakes'] is True  # Default value from database model
 
 def test_get_quizzes_empty(logged_in_client, app):
     """Test getting quizzes when none exist."""
@@ -226,4 +229,20 @@ def test_get_quizzes_empty(logged_in_client, app):
     response = logged_in_client.get('/api/game/quizzes')
     assert response.status_code == 200
     assert response.get_json() == []
+
+def test_get_quizzes_only_active(logged_in_client, app):
+    """Test that only active quizzes are returned."""
+    with app.app_context():
+        # Create an inactive quiz
+        inactive_quiz = Kviz(nazev="Inactive Quiz", is_active=False)
+        db.session.add(inactive_quiz)
+        db.session.commit()
+    
+    response = logged_in_client.get('/api/game/quizzes')
+    assert response.status_code == 200
+    
+    json_data = response.get_json()
+    # Should only return the active quiz from fixture, not the inactive one
+    assert len(json_data) == 1
+    assert json_data[0]['nazev'] == "API Test Quiz"
 
