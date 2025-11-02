@@ -96,7 +96,6 @@ def test_answer_log_in_session(logged_in_client, app):
     # Submit first answer
     logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        
         "answer_text": "A1"  # Correct
     })
     
@@ -122,14 +121,12 @@ def test_results_summary_returned(logged_in_client, app):
     # Submit first answer (correct)
     logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        
         "answer_text": "A1"
     })
     
     # Submit second answer (incorrect) - last question
     response_final = logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        
         "answer_text": "Wrong"
     })
     

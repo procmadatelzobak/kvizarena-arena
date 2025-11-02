@@ -75,7 +75,7 @@ def logged_in_client(app):
 
 def test_start_game(logged_in_client):
     """Test starting a new game."""
-    response = logged_in_client.post('/api/game/start/1', method='POST')
+    response = logged_in_client.post('/api/game/start/1')
     assert response.status_code == 201
     
     json_data = response.get_json()
