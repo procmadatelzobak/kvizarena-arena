@@ -8,8 +8,7 @@ const gameState = {
     totalQuestions: 0,
     quizName: '',
     timeLimit: 0,
-    userId: null,
-    nickname: null
+    userId: null
 };
 
 // Timer state variables
@@ -33,14 +32,7 @@ function initialize() {
             });
     }
     
-    // Set up login button listeners
-    document.getElementById('login-button').addEventListener('click', loginUser);
-    // Also allow pressing Enter to log in
-    document.getElementById('nickname-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') loginUser();
-    });
-
-    showScreen('login');
+    checkLoginStatus(); // Check if user is logged in
 }
 
 // Start the timer loop with visual progress ring
@@ -103,38 +95,31 @@ function startTimerLoop(duration) {
     gameTimer = requestAnimationFrame(timerStep);
 }
 
-// Login user
-async function loginUser() {
-    const nickname = document.getElementById('nickname-input').value.trim();
-    const errorEl = document.getElementById('login-error');
-
-    if (!nickname) {
-        errorEl.textContent = 'Přezdívka nesmí být prázdná.';
-        errorEl.style.display = 'block';
-        return;
-    }
-
+// Check login status
+async function checkLoginStatus() {
     try {
-        const response = await fetch('/api/game/user/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ nickname: nickname })
-        });
+        const response = await fetch('/api/game/user/me');
+        const user = await response.json();
 
-        const data = await response.json();
+        if (response.ok) {
+            // User is logged in
+            gameState.userId = user.user_id;
+            document.getElementById('user-name').textContent = user.name;
+            document.getElementById('login-link').style.display = 'none';
+            document.getElementById('user-info').style.display = 'inline';
 
-        if (!response.ok) {
-            errorEl.textContent = data.error || 'Neznámá chyba';
-            errorEl.style.display = 'block';
-        } else {
-            gameState.userId = data.user_id;
-            gameState.nickname = data.nickname;
-            fetchQuizzes(); // Now fetch quizzes *after* login
+            fetchQuizzes(); // Fetch quizzes now
             showScreen('quiz-list');
+
+        } else {
+            // User is not logged in
+            document.getElementById('login-link').style.display = 'inline';
+            document.getElementById('user-info').style.display = 'none';
+            showScreen('quiz-list'); // Show the list, but they can't play
         }
-    } catch (err) {
-        errorEl.textContent = 'Chyba připojení k serveru.';
-        errorEl.style.display = 'block';
+    } catch (e) {
+        console.error("Auth check failed", e);
+        document.getElementById('login-link').style.display = 'inline';
     }
 }
 
@@ -198,15 +183,17 @@ function renderQuizList(quizzes) {
 async function startGame(quizId) {
     try {
         const response = await fetch(`/api/game/start/${quizId}`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user_id: gameState.userId })
+            method: 'POST' // No body, auth is via cookie
         });
         
         const data = await response.json();
         
         if (!response.ok) {
-            if (data.status === 'completed') {
+            // Check for authentication error first
+            if (response.status === 401) {
+                alert('Nejste přihlášen(a). Prosím, přihlaste se.');
+                window.location.href = '/api/auth/login/google';
+            } else if (data.status === 'completed') {
                 alert(`Tento kvíz jste již dokončil(a). Vaše skóre: ${data.final_score}`);
             } else if (data.status === 'scheduled') {
                 alert(`Tento kvíz ještě nezačal. Začíná za ${Math.round(data.starts_in_seconds / 60)} minut.`);
@@ -307,7 +294,6 @@ async function submitAnswer(answerText) {
             },
             body: JSON.stringify({
                 session_id: gameState.sessionId,
-                user_id: gameState.userId,
                 answer_text: answerText
             })
         });
