@@ -70,14 +70,14 @@ def create_main_blueprint() -> Blueprint:
         # Serve the main frontend application
         return render_template('index.html')
     
-    @blueprint.get("/manifest.json")
-    def manifest():
-        # Serve the PWA manifest
-        return send_from_directory(str(FRONTEND_DIR), 'manifest.json')
-    
-    @blueprint.get("/sw.js")
-    def service_worker():
-        # Serve the service worker
-        return send_from_directory(str(FRONTEND_DIR), 'sw.js')
+    @blueprint.get("/privacy")
+    def privacy_page():
+        """Serves the Privacy Policy page."""
+        return render_template('privacy.html')
+
+    @blueprint.get("/terms")
+    def terms_page():
+        """Serves the Terms of Service page."""
+        return render_template('terms.html')
 
     return blueprint
