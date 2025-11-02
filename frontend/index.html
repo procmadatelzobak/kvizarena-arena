@@ -11,7 +11,15 @@
 </head>
 <body>
     <div id="app">
-        <div id="user-status" class="user-menu-container">
+        <nav class="main-nav">
+            <div class="nav-links-left">
+                <a href="#home" class="nav-link active" data-screen="home">
+                    <i class="fas fa-home"></i> Seznam kvízů
+                </a>
+                <a href="#leaderboard" class="nav-link" data-screen="leaderboard">
+                    <i class="fas fa-trophy"></i> Žebříčky
+                </a>
+            </div>
             <div id="user-info" style="display: none;">
                 <img src="" id="user-avatar" class="avatar" alt="Avatar">
                 <span id="user-name"></span>
@@ -19,21 +27,12 @@
                 <div class="user-dropdown">
                     <a href="#profile" class="nav-link" data-screen="profile">Můj Profil</a>
                     <a href="#settings" class="nav-link" data-screen="settings">Nastavení</a>
+                    <a href="#" id="install-app-btn" style="display: none;">
+                        <i class="fas fa-download"></i> Nainstalovat aplikaci
+                    </a>
                     <a href="/api/auth/logout" id="logout-link">Odhlásit se</a>
                 </div>
             </div>
-        </div>
-
-        <nav class="main-nav">
-            <a href="#home" class="nav-link active" data-screen="home">
-                <i class="fas fa-home"></i> Domů
-            </a>
-            <a href="#leaderboard" class="nav-link" data-screen="leaderboard">
-                <i class="fas fa-trophy"></i> Žebříčky
-            </a>
-            <a href="#profile" class="nav-link" data-screen="profile">
-                <i class="fas fa-user"></i> Můj Profil
-            </a>
         </nav>
 
         <!-- Screen 1: Home/Quiz List -->
