@@ -212,7 +212,7 @@ What is the capital of France?,Paris,London,Berlin,Madrid,Geography,2"""
         assert q1.obtiznost == 1
 
 
-def test_import_csv_utf8_sig(client, auth_headers, app):
+def test_import_csv_utf8_sig(admin_client, auth_headers, app):
     """Test CSV import with UTF-8-SIG encoding (BOM)."""
     # Create CSV with BOM
     csv_content = "\ufeffotazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3\nTest question?,Answer,Wrong1,Wrong2,Wrong3"
@@ -232,7 +232,7 @@ def test_import_csv_utf8_sig(client, auth_headers, app):
         assert quiz is not None
 
 
-def test_import_csv_existing_question(client, auth_headers, app):
+def test_import_csv_existing_question(admin_client, auth_headers, app):
     """Test CSV import with questions that already exist in database."""
     with app.app_context():
         # Create existing question
@@ -276,7 +276,7 @@ New question?,New answer,Wrong1,Wrong2,Wrong3"""
         assert count == 1
 
 
-def test_import_csv_no_file(client, auth_headers, app):
+def test_import_csv_no_file(admin_client, auth_headers, app):
     """Test CSV import without file returns error."""
     data = {
         'quiz_name': 'No File Quiz',
@@ -293,7 +293,7 @@ def test_import_csv_no_file(client, auth_headers, app):
         assert quiz is None
 
 
-def test_import_csv_empty_name(client, auth_headers, app):
+def test_import_csv_empty_name(admin_client, auth_headers, app):
     """Test CSV import without quiz name returns error."""
     csv_content = "otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3\nQ?,A,B,C,D"
     
@@ -312,7 +312,7 @@ def test_import_csv_empty_name(client, auth_headers, app):
         assert count == 0
 
 
-def test_import_csv_duplicate_quiz_name(client, auth_headers, app):
+def test_import_csv_duplicate_quiz_name(admin_client, auth_headers, app):
     """Test CSV import with duplicate quiz name returns error."""
     with app.app_context():
         # Create existing quiz
@@ -337,7 +337,7 @@ def test_import_csv_duplicate_quiz_name(client, auth_headers, app):
         assert count == 1
 
 
-def test_import_csv_wrong_file_type(client, auth_headers, app):
+def test_import_csv_wrong_file_type(admin_client, auth_headers, app):
     """Test CSV import with non-CSV file returns error."""
     data = {
         'quiz_name': 'Wrong Type Quiz',
@@ -354,7 +354,7 @@ def test_import_csv_wrong_file_type(client, auth_headers, app):
         assert quiz is None
 
 
-def test_import_csv_preserves_order(client, auth_headers, app):
+def test_import_csv_preserves_order(admin_client, auth_headers, app):
     """Test that CSV import preserves question order."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
 First question?,1,2,3,4
@@ -389,7 +389,7 @@ Third question?,3,4,5,6"""
         assert q3.otazka == 'Third question?'
 
 
-def test_import_csv_skips_invalid_rows(client, auth_headers, app):
+def test_import_csv_skips_invalid_rows(admin_client, auth_headers, app):
     """Test that CSV import skips rows with missing data."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
 Valid question?,Answer,Wrong1,Wrong2,Wrong3
@@ -414,7 +414,7 @@ Another valid?,Answer2,Wrong1,Wrong2,Wrong3"""
         assert questions == 2
 
 
-def test_import_csv_duplicate_questions_in_csv(client, auth_headers, app):
+def test_import_csv_duplicate_questions_in_csv(admin_client, auth_headers, app):
     """Test that CSV import skips duplicate questions within the same CSV file."""
     csv_content = """otazka,spravna_odpoved,spatna_odpoved1,spatna_odpoved2,spatna_odpoved3
 What is 2+2?,4,3,5,6
