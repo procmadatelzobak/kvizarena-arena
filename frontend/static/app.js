@@ -39,18 +39,20 @@ function initialize() {
     const userInfo = document.getElementById('user-info');
     const userDropdown = document.querySelector('.user-dropdown');
     
-    userInfo.addEventListener('click', (event) => {
-        event.stopPropagation(); // Stop the click from bubbling up to the window
-        userDropdown.classList.toggle('show');
-    });
-    
-    // Add a global click listener to close the menu
-    window.addEventListener('click', (event) => {
-        // If the dropdown is open and the click was *not* inside the user info area
-        if (userDropdown.classList.contains('show') && !userInfo.contains(event.target)) {
-            userDropdown.classList.remove('show');
-        }
-    });
+    if (userInfo && userDropdown) {
+        userInfo.addEventListener('click', (event) => {
+            event.stopPropagation(); // Stop the click from bubbling up to the window
+            userDropdown.classList.toggle('show');
+        });
+        
+        // Add a global click listener to close the menu
+        window.addEventListener('click', (event) => {
+            // If the dropdown is open and the click was *not* inside the user info area
+            if (userDropdown.classList.contains('show') && !userInfo.contains(event.target)) {
+                userDropdown.classList.remove('show');
+            }
+        });
+    }
     
     // Add navigation event handlers
     document.querySelectorAll('.nav-link').forEach(link => {
