@@ -140,3 +140,44 @@ def test_terms_page_route() -> None:
     content = response.data.decode('utf-8')
     assert "Podmínky použití" in content
     assert "Terms of Service" in content
+
+
+def test_no_cache_headers_present() -> None:
+    """Test that no-cache headers are present in all responses to prevent session hijacking."""
+    app = create_app({"TESTING": True})
+    client = app.test_client()
+    
+    # Test on health endpoint
+    response = client.get("/health")
+    assert response.status_code == 200
+    
+    # Verify all no-cache headers are present
+    assert 'Cache-Control' in response.headers
+    assert 'no-store' in response.headers['Cache-Control']
+    assert 'no-cache' in response.headers['Cache-Control']
+    assert 'must-revalidate' in response.headers['Cache-Control']
+    assert 'max-age=0' in response.headers['Cache-Control']
+    
+    assert 'Pragma' in response.headers
+    assert response.headers['Pragma'] == 'no-cache'
+    
+    assert 'Expires' in response.headers
+    assert response.headers['Expires'] == '-1'
+
+
+def test_no_cache_headers_on_different_routes() -> None:
+    """Test that no-cache headers are applied to various routes."""
+    app = create_app({"TESTING": True})
+    client = app.test_client()
+    
+    # Test multiple routes to ensure headers are applied universally
+    routes = ["/health", "/privacy", "/terms", "/manifest.json", "/sw.js"]
+    
+    for route in routes:
+        response = client.get(route)
+        # Only check successful responses
+        if response.status_code == 200:
+            assert 'Cache-Control' in response.headers, f"Cache-Control missing on {route}"
+            assert 'no-cache' in response.headers['Cache-Control'], f"no-cache missing on {route}"
+            assert 'Pragma' in response.headers, f"Pragma missing on {route}"
+            assert 'Expires' in response.headers, f"Expires missing on {route}"
