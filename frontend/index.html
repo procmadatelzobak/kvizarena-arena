@@ -6,17 +6,26 @@
     <title>KvízAréna</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <meta name="theme-color" content="#007bff">
 </head>
 <body>
     <div id="app">
-        <div id="user-status" style="padding: 10px; text-align: right;">
+        <div id="user-status" class="user-menu-container">
             <a href="/api/auth/login/google" id="login-link">Přihlásit se přes Google</a>
-            <span id="user-info" style="display: none;">
-                Ahoj, <strong id="user-name"></strong>!
-                <a href="/api/auth/logout" id="logout-link">(Odhlásit se)</a>
-            </span>
-            <details style="text-align: left; margin-top: 10px; font-size: 0.8em;">
+
+            <div id="user-info" style="display: none;">
+                <img src="" id="user-avatar" class="avatar" alt="Avatar">
+                <span id="user-name"></span>
+                <i class="fas fa-chevron-down"></i>
+                <div class="user-dropdown">
+                    <a href="#profile" class="nav-link" data-screen="profile">Můj Profil</a>
+                    <a href="#settings" class="nav-link" data-screen="settings">Nastavení</a>
+                    <a href="/api/auth/logout" id="logout-link">Odhlásit se</a>
+                </div>
+            </div>
+
+            <details style="text-align: left; margin-top: 10px; font-size: 0.8em; position: absolute; right: 20px; top: 60px; background: #fff; padding: 5px; border: 1px solid #ccc; z-index: 9;">
                 <summary>Local Dev Login</summary>
                 <div id="local-login-form">
                     <input type="text" id="local-user" placeholder="testuser" style="width: 100px;">
@@ -27,8 +36,20 @@
             </details>
         </div>
 
-        <!-- Screen 1: Quiz List -->
-        <div id="screen-quiz-list" class="hidden">
+        <nav class="main-nav">
+            <a href="#home" class="nav-link active" data-screen="home">
+                <i class="fas fa-home"></i> Domů
+            </a>
+            <a href="#leaderboard" class="nav-link" data-screen="leaderboard">
+                <i class="fas fa-trophy"></i> Žebříčky
+            </a>
+            <a href="#profile" class="nav-link" data-screen="profile">
+                <i class="fas fa-user"></i> Můj Profil
+            </a>
+        </nav>
+
+        <!-- Screen 1: Home/Quiz List -->
+        <div id="screen-home" class="hidden">
             <h2>Načítám kvízy...</h2>
         </div>
 
@@ -62,11 +83,40 @@
             <button id="play-again-button">Zpět na výběr</button>
         </div>
 
+        <!-- Screen 4: Leaderboard -->
+        <div id="screen-leaderboard" class="hidden">
+            <h2><i class="fas fa-trophy"></i> Globální žebříček</h2>
+            <div id="leaderboard-container">
+                <p class="loading">Načítám žebříček...</p>
+            </div>
+        </div>
+
+        <!-- Screen 5: Profile -->
+        <div id="screen-profile" class="hidden">
+            <h2><i class="fas fa-user"></i> Můj Profil</h2>
+            <div id="profile-stats-container">
+                <p class="loading">Načítám statistiky...</p>
+            </div>
+            <h3>Moje úspěchy</h3>
+            <div id="profile-achievements-container"></div>
+            <h3>Historie her</h3>
+            <div id="profile-history-container"></div>
+        </div>
+
+        <!-- Screen 6: Settings -->
+        <div id="screen-settings" class="hidden">
+            <h2><i class="fas fa-cog"></i> Nastavení</h2>
+            <p>Zde bude možné spravovat účet (např. smazat data).</p>
+            <button id="delete-account-btn" class="delete-button">Smazat můj účet</button>
+        </div>
+
         <footer style="text-align: center; padding: 20px; margin-top: 30px; border-top: 1px solid #eee; font-size: 0.9em;">
             <p>
                 &copy; 2025 KvízAréna | 
                 <a href="/privacy">Zásady ochrany osobních údajů</a> | 
                 <a href="/terms">Podmínky použití</a>
+                <br>
+                Ikony od <a href="https://fontawesome.com" target="_blank">Font Awesome</a>
             </p>
         </footer>
     </div>
