@@ -595,7 +595,7 @@ async function loadProfile() {
 
         // Render History
         if (data.history.length > 0) {
-             histContainer.innerHTML = `
+            histContainer.innerHTML = `
                 <table class="history-table">
                     <thead><tr><th>Kvíz</th><th>Skóre</th><th>Percentil</th><th>Datum</th></tr></thead>
                     <tbody>
@@ -609,7 +609,7 @@ async function loadProfile() {
                         `).join('')}
                     </tbody>
                 </table>
-             `;
+            `;
         } else {
             histContainer.innerHTML = '<p>Zatím žádná historie.</p>';
         }

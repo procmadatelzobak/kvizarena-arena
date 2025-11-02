@@ -69,10 +69,10 @@ def check_and_award_achievements(user_id: int, new_result: GameResult):
                 1 for res in all_results if res.kviz_id_fk in scheduled_quiz_ids
             )
             if completed_scheduled_count >= 3:
-                 newly_awarded.append(UserAchievement(
+                newly_awarded.append(UserAchievement(
                     user_id_fk=user_id, achievement_id_fk="warrior"
                 ))
-                 existing_ach_ids.add("warrior")
+                existing_ach_ids.add("warrior")
 
         # --- Commit new achievements ---
         if newly_awarded:
