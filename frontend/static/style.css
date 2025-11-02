@@ -454,7 +454,7 @@ h3 {
     justify-content: flex-end;
     cursor: pointer;
     color: white;
-    position: relative; /* For the dropdown */
+    position: relative; /* Positioning context for absolute positioned dropdown menu */
     padding: 10px;
 }
 .avatar {
@@ -469,9 +469,9 @@ h3 {
 .user-dropdown {
     display: none;
     position: absolute;
-    top: 100%; /* Position below the bar */
-    right: 0;
-    left: auto; /* Reset left alignment */
+    top: 100%; /* Positioned below the navigation bar */
+    right: 0; /* Aligned to the right edge */
+    left: auto; /* Override default left alignment */
     background: white;
     border: 1px solid #ddd;
     border-radius: 5px;
@@ -587,12 +587,12 @@ h3 {
     background-color: #c82333;
 }
 
-/* Add to end of file */
+/* Navigation bar left-side links container */
 .main-nav .nav-links-left {
     display: flex; /* Keeps left-side links together */
 }
 
-/* Style for the install button icon */
+/* PWA install button icon spacing */
 #install-app-btn i {
     margin-right: 8px;
 }
