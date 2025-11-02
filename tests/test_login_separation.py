@@ -83,13 +83,13 @@ def test_main_app_does_not_have_login_elements() -> None:
     # Should NOT have login button in the main nav area
     # (login.html has the Google login button, index.html should not)
     # Check that there's no standalone Google login link
-    assert "Přihlásit se přes Google" not in content or '<a href="/api/auth/login/google" id="login-link"' not in content
+    assert "Přihlásit se přes Google" not in content and '<a href="/api/auth/login/google" id="login-link"' not in content
     
     # Should NOT have the local dev login form
     assert 'id="local-login-btn"' not in content
     
     # Should NOT have footer in main app (moved to login page)
-    assert "Ikony od" not in content or "Font Awesome" not in content
+    assert "Ikony od" not in content and "Font Awesome" not in content
 
 
 def test_session_import_exists() -> None:
