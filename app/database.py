@@ -100,12 +100,19 @@ class KvizOtazky(db.Model):
 # --- Models for Game Logic (MVP) ---
 
 class User(db.Model):
-    """Model for a player, authenticated via Google OAuth."""
+    """Model for a player, authenticated via Google OAuth OR local test account."""
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    google_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
-    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    
+    # Google-specific fields (nullable)
+    google_id: Mapped[str] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=True, unique=True)
+    
+    # Local-specific fields (nullable)
+    username: Mapped[str] = mapped_column(String(100), nullable=True, unique=True, index=True)
+    
+    # Common fields
     name: Mapped[str] = mapped_column(String(255), nullable=True)
     profile_pic_url: Mapped[str] = mapped_column(Text, nullable=True)
     is_admin: Mapped[bool] = mapped_column(db.Boolean, nullable=False, default=False)

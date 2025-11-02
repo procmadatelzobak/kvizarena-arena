@@ -20,7 +20,7 @@ def app():
     with app.app_context():
         db.create_all()
         # Create a test user for all tests
-        test_user = User(nickname="test_player")
+        test_user = User(username="test_player", name="Test Player")
         db.session.add(test_user)
         db.session.commit()
         yield app
@@ -30,6 +30,20 @@ def app():
 def client(app):
     """Create a test client."""
     return app.test_client()
+
+@pytest.fixture
+def logged_in_client(app):
+    """A client that is logged in as a regular user."""
+    with app.app_context():
+        # Get the test user created in app fixture
+        user = User.query.filter_by(username="test_player").first()
+        user_id = user.id
+
+    with app.test_client() as client:
+        # Set the user ID in the session
+        with client.session_transaction() as sess:
+            sess['user_id'] = user_id
+        yield client
 
 def create_test_quiz(app, quiz_mode='on_demand', start_time=None, is_active=True):
     """Helper to create a test quiz with questions."""
@@ -71,18 +85,18 @@ def create_test_quiz(app, quiz_mode='on_demand', start_time=None, is_active=True
 
 # Tests for Results Summary Feature
 
-def test_answer_log_in_session(client, app):
+def test_answer_log_in_session(logged_in_client, app):
     """Test that answer_log is created and populated."""
     quiz_id = create_test_quiz(app)
     
     # Start game
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     session_id = response.get_json()['session_id']
     
     # Submit first answer
-    client.post('/api/game/answer', json={
+    logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
+        
         "answer_text": "A1"  # Correct
     })
     
@@ -97,25 +111,25 @@ def test_answer_log_in_session(client, app):
         assert session.answer_log[0]['source_url'] == "http://example.com/q1"
 
 
-def test_results_summary_returned(client, app):
+def test_results_summary_returned(logged_in_client, app):
     """Test that results_summary is returned when quiz finishes."""
     quiz_id = create_test_quiz(app)
     
     # Start game
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     session_id = response.get_json()['session_id']
     
     # Submit first answer (correct)
-    client.post('/api/game/answer', json={
+    logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
+        
         "answer_text": "A1"
     })
     
     # Submit second answer (incorrect) - last question
-    response_final = client.post('/api/game/answer', json={
+    response_final = logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
+        
         "answer_text": "Wrong"
     })
     
@@ -139,22 +153,22 @@ def test_results_summary_returned(client, app):
 
 # Tests for Scheduled Quizzes Feature
 
-def test_inactive_quiz_not_available(client, app):
+def test_inactive_quiz_not_available(logged_in_client, app):
     """Test that inactive quizzes cannot be started."""
     quiz_id = create_test_quiz(app, is_active=False)
     
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     assert response.status_code == 404
     assert response.get_json()['error'] == "This quiz is not currently available."
 
 
-def test_scheduled_quiz_before_start_time(client, app):
+def test_scheduled_quiz_before_start_time(logged_in_client, app):
     """Test that scheduled quiz cannot be started before its start time."""
     # Create a quiz that starts 1 hour in the future
     future_time = datetime.now(timezone.utc) + timedelta(hours=1)
     quiz_id = create_test_quiz(app, quiz_mode='scheduled', start_time=future_time)
     
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     assert response.status_code == 403
     
     json_data = response.get_json()
@@ -165,13 +179,13 @@ def test_scheduled_quiz_before_start_time(client, app):
     assert 'start_time_utc' in json_data
 
 
-def test_scheduled_quiz_after_start_time(client, app):
+def test_scheduled_quiz_after_start_time(logged_in_client, app):
     """Test that scheduled quiz can be started after its start time."""
     # Create a quiz that started 1 hour ago
     past_time = datetime.now(timezone.utc) - timedelta(hours=1)
     quiz_id = create_test_quiz(app, quiz_mode='scheduled', start_time=past_time)
     
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     assert response.status_code == 201
     
     json_data = response.get_json()
@@ -179,22 +193,22 @@ def test_scheduled_quiz_after_start_time(client, app):
     assert json_data['quiz_name'] == "Test Quiz scheduled"
 
 
-def test_on_demand_quiz_always_available(client, app):
+def test_on_demand_quiz_always_available(logged_in_client, app):
     """Test that on-demand quizzes can always be started."""
     quiz_id = create_test_quiz(app, quiz_mode='on_demand')
     
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     assert response.status_code == 201
     
     json_data = response.get_json()
     assert 'session_id' in json_data
 
 
-def test_scheduled_quiz_without_start_time(client, app):
+def test_scheduled_quiz_without_start_time(logged_in_client, app):
     """Test that scheduled quiz without start_time returns error."""
     quiz_id = create_test_quiz(app, quiz_mode='scheduled', start_time=None)
     
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_logged_in_client.post(f'/api/game/start/{quiz_id}')
     assert response.status_code == 500
     assert response.get_json()['error'] == "This scheduled quiz has no start time set."
 

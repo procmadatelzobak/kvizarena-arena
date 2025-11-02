@@ -4,10 +4,12 @@ Authentication Blueprint for KvízAréna.
 Handles Google OAuth2 authentication flow.
 """
 import os
+import secrets
 import logging
-from flask import Blueprint, url_for, redirect, session
+from flask import Blueprint, url_for, redirect, session, request, jsonify
 from authlib.integrations.flask_client import OAuth
 from authlib.common.errors import AuthlibBaseError
+from sqlalchemy.exc import IntegrityError
 from app.database import db, User
 
 logger = logging.getLogger(__name__)
@@ -22,22 +24,39 @@ def login_google():
     """Redirects to Google's login page."""
     # The redirect_uri must match *exactly* what's in Google Console
     redirect_uri = url_for('auth.callback_google', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    
+    # Generate a secure nonce and store it in the session
+    nonce = secrets.token_urlsafe(32)
+    session['google_auth_nonce'] = nonce
+    
+    # Pass the nonce to Google
+    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce)
 
 @auth_bp.route('/callback/google')
 def callback_google():
     """Handles the callback from Google."""
     try:
         token = oauth.google.authorize_access_token()
-        user_info = oauth.google.parse_id_token(token)
+        
+        # Retrieve the nonce we stored in the session
+        nonce = session.get('google_auth_nonce')
+        if not nonce:
+            raise Exception("Nonce not found in session.")
+        
+        # Pass the token AND the nonce for validation
+        user_info = oauth.google.parse_id_token(token, nonce=nonce)
+        
+        # Clear the used nonce from the session
+        session.pop('google_auth_nonce', None)
+        
     except AuthlibBaseError as e:
         # Log OAuth-specific errors with more context for debugging
         logger.error(f"OAuth error during callback: {type(e).__name__} - {str(e)[:100]}")
         return redirect('/?error=auth_failed')
     except Exception as e:
-        # Log unexpected errors but limit details to avoid exposing sensitive data
-        logger.error(f"Unexpected error during OAuth callback: {type(e).__name__} - {str(e)[:100]}")
-        return redirect('/?error=auth_failed')
+        # Print the actual error to the log
+        print(f"Unexpected error during OAuth callback: {type(e).__name__} - {e}")
+        return redirect('/?error=auth_failed') # Redirect to frontend with error
 
     # Find or create user in database
     google_id = user_info.get('sub')
@@ -77,3 +96,41 @@ def init_oauth(app):
         server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
         client_kwargs={'scope': 'openid email profile'}
     )
+
+@auth_bp.route('/login/local', methods=['POST'])
+def login_local():
+    """Handles login for the local test user defined in .env"""
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    # Get credentials from environment
+    local_user = os.getenv('LOCAL_TEST_USERNAME')
+    local_pass = os.getenv('LOCAL_TEST_PASSWORD')
+
+    if not local_user or not local_pass:
+        return jsonify({"error": "Local test user is not configured."}), 500
+
+    if username == local_user and password == local_pass:
+        # Find or create the test user
+        user = User.query.filter_by(username=local_user).first()
+        if not user:
+            try:
+                user = User(
+                    username=local_user,
+                    name="Local Test User",
+                    # Make this user an admin by default for easy testing
+                    is_admin=True 
+                )
+                db.session.add(user)
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                return jsonify({"error": "Failed to create local test user."}), 500
+
+        # Log them in
+        session['user_id'] = user.id
+        session['user_name'] = user.name
+        return jsonify({"message": "Login successful", "user_id": user.id, "name": user.name}), 200
+
+    return jsonify({"error": "Invalid username or password"}), 401

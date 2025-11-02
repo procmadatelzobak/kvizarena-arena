@@ -20,7 +20,7 @@ def app():
         db.create_all()
         
         # Create a test user
-        test_user = User(nickname="test_player")
+        test_user = User(username="test_player", name="Test Player")
         db.session.add(test_user)
         db.session.commit()
         
@@ -57,11 +57,25 @@ def client(app):
     """Create a test client."""
     return app.test_client()
 
-def test_start_game(client):
+@pytest.fixture
+def logged_in_client(app):
+    """A client that is logged in as a regular user."""
+    with app.app_context():
+        # Create regular user
+        user = User(username="testuser", name="Test User")
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    with app.test_client() as client:
+        # Set the user ID in the session
+        with client.session_transaction() as sess:
+            sess['user_id'] = user_id
+        yield client
+
+def test_start_game(logged_in_client):
     """Test starting a new game."""
-    response = client.post('/api/game/start/1', 
-                          json={'user_id': 1},
-                          headers={'Content-Type': 'application/json'})
+    response = logged_in_client.post('/api/game/start/1', method='POST')
     assert response.status_code == 201
     
     json_data = response.get_json()
@@ -73,7 +87,7 @@ def test_start_game(client):
     assert json_data['question']['text'] == "Q1"
     assert len(json_data['question']['answers']) == 4
 
-def test_start_game_no_questions(client, app):
+def test_start_game_no_questions(logged_in_client, app):
     """Test starting a game on a quiz with no questions."""
     with app.app_context():
         empty_quiz = Kviz(nazev="Empty Quiz")
@@ -81,20 +95,19 @@ def test_start_game_no_questions(client, app):
         db.session.commit()
         quiz_id = empty_quiz.kviz_id
         
-    response = client.post(f'/api/game/start/{quiz_id}', json={'user_id': 1})
+    response = logged_in_client.post(f'/api/game/start/{quiz_id}')
     assert response.status_code == 404
     assert response.get_json()['error'] == "Quiz has no questions."
 
-def test_submit_answer_correct(client):
+def test_submit_answer_correct(logged_in_client):
     """Test submitting a correct answer."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1})
+    response_start = logged_in_client.post('/api/game/start/1')
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit correct answer
-    response_answer = client.post('/api/game/answer', json={
+    response_answer = logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
         "answer_text": "A1"
     })
     
@@ -107,16 +120,15 @@ def test_submit_answer_correct(client):
     assert json_data['next_question']['number'] == 2
     assert json_data['next_question']['text'] == "Q2"
 
-def test_submit_answer_incorrect(client):
+def test_submit_answer_incorrect(logged_in_client):
     """Test submitting an incorrect answer."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1})
+    response_start = logged_in_client.post('/api/game/start/1')
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit incorrect answer
-    response_answer = client.post('/api/game/answer', json={
+    response_answer = logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
         "answer_text": "Wrong Answer"
     })
     
@@ -127,10 +139,10 @@ def test_submit_answer_incorrect(client):
     assert json_data['current_score'] == 0
     assert json_data['next_question']['number'] == 2
 
-def test_submit_answer_time_limit(client, app):
+def test_submit_answer_time_limit(logged_in_client, app):
     """Test submitting an answer after the time limit."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1})
+    response_start = logged_in_client.post('/api/game/start/1')
     session_id = response_start.get_json()['session_id']
     
     # 2. Manually update timestamp in DB to simulate time running out
@@ -140,9 +152,8 @@ def test_submit_answer_time_limit(client, app):
         db.session.commit()
         
     # 3. Submit answer (even if correct, it's too late)
-    response_answer = client.post('/api/game/answer', json={
+    response_answer = logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
         "answer_text": "A1"
     })
     
@@ -153,23 +164,21 @@ def test_submit_answer_time_limit(client, app):
     assert json_data['current_score'] == 0 # No points for being late
     assert json_data['next_question']['number'] == 2
 
-def test_game_completion(client):
+def test_game_completion(logged_in_client):
     """Test submitting the last answer and finishing the game."""
     # 1. Start game
-    response_start = client.post('/api/game/start/1', json={'user_id': 1})
+    response_start = logged_in_client.post('/api/game/start/1')
     session_id = response_start.get_json()['session_id']
     
     # 2. Submit answer for Q1
-    client.post('/api/game/answer', json={
+    logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
         "answer_text": "A1" # Correct
     })
     
     # 3. Submit answer for Q2 (last question)
-    response_final = client.post('/api/game/answer', json={
+    response_final = logged_in_client.post('/api/game/answer', json={
         "session_id": session_id,
-        "user_id": 1,
         "answer_text": "Wrong Answer" # Incorrect
     })
     
@@ -181,20 +190,19 @@ def test_game_completion(client):
     assert json_data['total_questions'] == 2
     assert 'next_question' not in json_data
 
-def test_submit_answer_invalid_session(client):
+def test_submit_answer_invalid_session(logged_in_client):
     """Test submitting an answer with an invalid session ID."""
-    response = client.post('/api/game/answer', json={
+    response = logged_in_client.post('/api/game/answer', json={
         "session_id": "non-existent-session-id",
-        "user_id": 1,
         "answer_text": "A1"
     })
     # Should return 404 for invalid session
     assert response.status_code == 404
     assert response.get_json()['error'] == "Invalid or expired session"
 
-def test_get_quizzes(client, app):
+def test_get_quizzes(logged_in_client, app):
     """Test getting all available quizzes."""
-    response = client.get('/api/game/quizzes')
+    response = logged_in_client.get('/api/game/quizzes')
     assert response.status_code == 200
     
     json_data = response.get_json()
@@ -207,7 +215,7 @@ def test_get_quizzes(client, app):
     assert quiz['popis'] is None
     assert quiz['pocet_otazek'] == 2
 
-def test_get_quizzes_empty(client, app):
+def test_get_quizzes_empty(logged_in_client, app):
     """Test getting quizzes when none exist."""
     # Remove the test quiz
     with app.app_context():
@@ -215,7 +223,7 @@ def test_get_quizzes_empty(client, app):
         db.session.query(Kviz).delete()
         db.session.commit()
     
-    response = client.get('/api/game/quizzes')
+    response = logged_in_client.get('/api/game/quizzes')
     assert response.status_code == 200
     assert response.get_json() == []
 
