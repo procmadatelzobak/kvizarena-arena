@@ -88,23 +88,23 @@ function initialize() {
         }
     });
 
-    document.getElementById('install-app-btn').addEventListener('click', async (e) => {
-        e.preventDefault();
-        // Hide the button
-        const installBtn = document.getElementById('install-app-btn');
-        if (installBtn) {
+    const installBtn = document.getElementById('install-app-btn');
+    if (installBtn) {
+        installBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            // Hide the button
             installBtn.style.display = 'none';
-        }
-        // Show the install prompt
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            // Wait for the user to respond to the prompt
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            // We've used the prompt, and can't use it again.
-            deferredPrompt = null;
-        }
-    });
+            // Show the install prompt
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                // Wait for the user to respond to the prompt
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                // We've used the prompt, and can't use it again.
+                deferredPrompt = null;
+            }
+        });
+    }
     // --- END PWA LOGIC ---
 }
 
