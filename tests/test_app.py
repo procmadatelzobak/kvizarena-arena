@@ -112,3 +112,31 @@ def test_pwa_manifest_route() -> None:
     response = client.get("/manifest.json")
     assert response.status_code == 200
     assert response.content_type == "application/json"
+
+
+def test_privacy_page_route() -> None:
+    """Test that /privacy route is accessible and returns HTML."""
+    app = create_app({"TESTING": True})
+    client = app.test_client()
+    
+    response = client.get("/privacy")
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/html")
+    # Decode to check Czech text content
+    content = response.data.decode('utf-8')
+    assert "Zásady ochrany osobních údajů" in content
+    assert "Privacy Policy" in content
+
+
+def test_terms_page_route() -> None:
+    """Test that /terms route is accessible and returns HTML."""
+    app = create_app({"TESTING": True})
+    client = app.test_client()
+    
+    response = client.get("/terms")
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/html")
+    # Decode to check Czech text content
+    content = response.data.decode('utf-8')
+    assert "Podmínky použití" in content
+    assert "Terms of Service" in content
