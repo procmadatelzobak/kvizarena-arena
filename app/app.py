@@ -7,6 +7,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .database import init_app as init_database
 from .blueprints import register_blueprints
@@ -26,6 +27,14 @@ def create_app(config: dict[str, Any] | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=False, 
                 template_folder=frontend_dir, 
                 static_folder=frontend_static_dir)
+
+    # Apply ProxyFix to trust headers from the reverse proxy
+    # This ensures url_for(..., _external=True) generates the correct
+    # public-facing URL (e.g., https://your.public.domain)
+    # instead of the internal private IP (http://10.x.x.x).
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=1, x_proto=1, x_host=1
+    )
 
     # Načte klíč z .env, a pokud tam není, použije "dev" jako záložní hodnotu
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")

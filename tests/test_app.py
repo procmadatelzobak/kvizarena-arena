@@ -75,3 +75,20 @@ def test_config_parameter_overrides_env() -> None:
         app = create_app({"SECRET_KEY": "config-secret"})
         # Direct assignment means env is set first, then config overrides
         assert app.config["SECRET_KEY"] == "config-secret"
+
+
+def test_proxy_fix_middleware_applied() -> None:
+    """Test that ProxyFix middleware is applied to the app."""
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    
+    app = create_app({"TESTING": True})
+    
+    # Check that the wsgi_app is wrapped with ProxyFix
+    assert isinstance(app.wsgi_app, ProxyFix)
+    
+    # Verify ProxyFix parameters are set correctly
+    # These ensure that X-Forwarded-For, X-Forwarded-Proto, and X-Forwarded-Host 
+    # headers are trusted from the reverse proxy
+    assert app.wsgi_app.x_for == 1
+    assert app.wsgi_app.x_proto == 1
+    assert app.wsgi_app.x_host == 1
