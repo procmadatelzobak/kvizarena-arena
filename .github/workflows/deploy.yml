@@ -16,3 +16,8 @@ jobs:
         run: |
           echo "Spouštím /home/kvizarena/kvizarena-arena/deploy.sh"
           /home/kvizarena/kvizarena-arena/deploy.sh
+          
+          # NOTE: After WebSocket integration, the deploy.sh script and kvizarena.service
+          # on the server must be updated to use gunicorn with the eventlet worker:
+          #   gunicorn --bind 0.0.0.0:5000 -w 3 -k eventlet "app:create_app()" --daemon
+          # This ensures WebSocket connections work correctly in production.

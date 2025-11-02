@@ -83,15 +83,24 @@ def test_proxy_fix_middleware_applied() -> None:
     
     app = create_app({"TESTING": True})
     
-    # Check that the wsgi_app is wrapped with ProxyFix
-    assert isinstance(app.wsgi_app, ProxyFix)
+    # After SocketIO integration, the wsgi_app is wrapped by SocketIO middleware
+    # which in turn wraps the ProxyFix middleware
+    # Check that ProxyFix is in the middleware chain
+    if hasattr(app.wsgi_app, 'wsgi_app'):
+        # SocketIO wraps the app, so ProxyFix is the inner wsgi_app
+        proxy_fix = app.wsgi_app.wsgi_app
+    else:
+        # Fallback for when SocketIO is not used
+        proxy_fix = app.wsgi_app
+    
+    assert isinstance(proxy_fix, ProxyFix)
     
     # Verify ProxyFix parameters are set correctly
     # These ensure that X-Forwarded-For, X-Forwarded-Proto, and X-Forwarded-Host 
     # headers are trusted from the reverse proxy
-    assert app.wsgi_app.x_for == 1
-    assert app.wsgi_app.x_proto == 1
-    assert app.wsgi_app.x_host == 1
+    assert proxy_fix.x_for == 1
+    assert proxy_fix.x_proto == 1
+    assert proxy_fix.x_host == 1
 
 
 def test_pwa_service_worker_route() -> None:
